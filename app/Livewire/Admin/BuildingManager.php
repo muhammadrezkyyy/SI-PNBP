@@ -133,7 +133,7 @@ class BuildingManager extends Component
 
     public function render()
     {
-        $buildings = Building::with('facilityType')->orderBy('name')->paginate(9);
+        $buildings = Building::with('facilityType')->orderBy('name')->paginate(6);
         return view('livewire.admin.building-manager', compact('buildings'));
     }
 }

@@ -16,8 +16,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 class BookingWizard extends Component
 {
     // --- Step State ---
-    public int    $current_step  = 1;
-    public int    $total_steps   = 3;
+    public int $current_step = 1;
 
     // --- Step 1: Schedule ---
     public string $facility_type_id = '';
@@ -57,20 +56,13 @@ class BookingWizard extends Component
 
     public function nextStep(): void
     {
-        $this->conflict_error = '';
-
         if ($this->current_step === 1) {
             $this->validateStep1();
-        } elseif ($this->current_step === 2) {
-            $this->validateStep2();
-        }
-
-        if ($this->current_step < $this->total_steps) {
-            $this->current_step++;
+            $this->current_step = 2;
         }
     }
 
-    public function prevStep(): void
+    public function previousStep(): void
     {
         if ($this->current_step > 1) {
             $this->current_step--;
@@ -136,6 +128,8 @@ class BookingWizard extends Component
     public function confirmBooking(ReservationService $service): void
     {
         $this->conflict_error = '';
+        
+        $this->validateStep2();
 
         try {
             $reservation = $service->lockAndBook(
@@ -181,12 +175,41 @@ class BookingWizard extends Component
     {
         $fields = BookingFormField::ordered()->get();
 
+        $conflictingBuildingIds = [];
+        if ($this->start_date && $this->end_date) {
+            $conflictingBuildingIds = Reservation::whereNotIn('status', [
+                    ReservationStatus::REJECTED->value,
+                    ReservationStatus::EXPIRED->value,
+                ])
+                ->where(function ($q) {
+                    $q->whereBetween('start_date', [$this->start_date, $this->end_date])
+                      ->orWhereBetween('end_date', [$this->start_date, $this->end_date])
+                      ->orWhere(function ($q2) {
+                          $q2->where('start_date', '<=', $this->start_date)
+                             ->where('end_date', '>=', $this->end_date);
+                      });
+                })
+                ->pluck('building_id')
+                ->toArray();
+        }
+
         // Only show facility types that have at least 1 building (active or inactive)
-        $facilityTypes = FacilityType::withCount('activeBuildings')
-            ->with('images')
+        $facilityTypes = FacilityType::with(['images', 'buildings' => function($q) {
+                $q->where('is_active', true);
+            }])
             ->has('buildings')
             ->orderBy('name')
             ->get();
+
+        foreach ($facilityTypes as $type) {
+            $available = 0;
+            foreach ($type->buildings as $building) {
+                if (!in_array($building->id, $conflictingBuildingIds)) {
+                    $available++;
+                }
+            }
+            $type->dynamic_available_count = $available;
+        }
 
         // Get buildings for selected type with availability info
         $buildings = collect();

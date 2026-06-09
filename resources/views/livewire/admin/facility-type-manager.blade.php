@@ -26,9 +26,12 @@
 
                 {{-- Image Carousel --}}
                 @php $allImages = $type->all_image_paths; @endphp
-                <div x-data="{ activeSlide: 0, slides: {{ count($allImages) }} }" class="relative h-44 w-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 overflow-hidden group/slider">
+                <div x-data="{ activeSlide: 0, slides: {{ count($allImages) }}, startX: 0 }" 
+                     @touchstart.stop="startX = $event.touches[0].clientX"
+                     @touchend.stop="if (startX - $event.changedTouches[0].clientX > 40 && slides > 1) { activeSlide = activeSlide < slides - 1 ? activeSlide + 1 : 0 } else if ($event.changedTouches[0].clientX - startX > 40 && slides > 1) { activeSlide = activeSlide > 0 ? activeSlide - 1 : slides - 1 }"
+                     class="relative h-44 w-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 overflow-hidden group/slider">
                     @if(count($allImages) > 0)
-                        <div class="flex h-full transition-transform duration-500 ease-out" :style="'transform: translateX(-' + (activeSlide * 100) + '%)'">
+                        <div class="flex h-full transition-transform duration-500 ease-out" :style="`transform: translateX(-${activeSlide * 100}%)`">
                             @foreach($allImages as $imgPath)
                             <div class="flex-shrink-0 w-full h-full">
                                 <img src="{{ asset('storage/' . $imgPath) }}" alt="{{ $type->name }}" class="w-full h-full object-cover">
@@ -153,9 +156,13 @@
 
                 {{-- Cover preview --}}
                 @if($coverImage)
-                    <div class="rounded-xl overflow-hidden border border-blue-200 dark:border-blue-800 relative h-32">
+                    <div class="rounded-xl overflow-hidden border border-blue-200 dark:border-blue-800 relative h-32 group">
                         <img src="{{ $coverImage->temporaryUrl() }}" class="w-full h-full object-cover">
-                        <span class="absolute top-2 right-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">Cover Baru</span>
+                        <span class="absolute top-2 right-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">Cover Baru</span>
+                        <button type="button" wire:click="$set('coverImage', null)"
+                                class="absolute top-2 left-2 h-7 w-7 rounded-full bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-700" title="Hapus foto ini">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
                     </div>
                 @elseif($oldCoverImage)
                     <div class="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 relative h-32">
@@ -195,10 +202,14 @@
                     {{-- New gallery preview --}}
                     @if(count($galleryImages) > 0)
                     <div class="grid grid-cols-4 gap-2 mb-3">
-                        @foreach($galleryImages as $img)
-                        <div class="rounded-lg overflow-hidden border-2 border-blue-300 dark:border-blue-700 aspect-square relative">
+                        @foreach($galleryImages as $index => $img)
+                        <div class="rounded-lg overflow-hidden border-2 border-blue-300 dark:border-blue-700 aspect-square relative group">
                             <img src="{{ $img->temporaryUrl() }}" class="w-full h-full object-cover">
                             <span class="absolute bottom-0 inset-x-0 bg-blue-600 text-center text-[9px] font-bold text-white py-0.5">Baru</span>
+                            <button type="button" wire:click="removeNewGalleryImage({{ $index }})"
+                                    class="absolute top-1 right-1 h-6 w-6 rounded-full bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-700" title="Hapus foto ini">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
                         </div>
                         @endforeach
                     </div>

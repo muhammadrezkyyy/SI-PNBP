@@ -7,7 +7,7 @@
         </button>
     </div>
 
-    <div class="max-w-2xl mx-auto mt-4">
+    <div class="max-w-5xl xl:max-w-7xl w-full mx-auto mt-4">
 
         @php
             $appName = \App\Models\AppSetting::getVal('app_name', 'SI-RESERVASI PNBP');
@@ -55,40 +55,12 @@
         </div>
         @else
 
-        {{-- Step Progress Bar --}}
-        <div class="mb-8">
-            <div class="flex items-center justify-between">
-                @foreach([1 => 'Jadwal', 2 => 'Data Diri', 3 => 'Konfirmasi'] as $step => $label)
-                <div class="flex flex-col items-center gap-2 flex-1">
-                    <div class="relative flex items-center w-full">
-                        @if($step > 1)
-                        <div class="flex-1 h-0.5 {{ $current_step >= $step ? 'bg-blue-600' : 'bg-slate-200' }} transition-colors duration-300"></div>
-                        @endif
-                        <div class="flex h-9 w-9 items-center justify-center rounded-full border-2 transition-all duration-300 flex-shrink-0 mx-auto
-                                    {{ $current_step > $step ? 'border-blue-600 bg-blue-600' :
-                                       ($current_step == $step ? 'border-blue-600 bg-white dark:bg-slate-800' : 'border-slate-300 bg-white dark:bg-slate-800') }}">
-                            @if($current_step > $step)
-                                <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                            @else
-                                <span class="text-sm font-bold {{ $current_step == $step ? 'text-blue-600' : 'text-slate-400' }}">{{ $step }}</span>
-                            @endif
-                        </div>
-                        @if($step < 3)
-                        <div class="flex-1 h-0.5 {{ $current_step > $step ? 'bg-blue-600' : 'bg-slate-200' }} transition-colors duration-300"></div>
-                        @endif
-                    </div>
-                    <span class="text-[10px] sm:text-xs font-medium {{ $current_step == $step ? 'text-blue-700' : 'text-slate-400' }}">{{ $label }}</span>
-                </div>
-                @endforeach
-            </div>
-        </div>
-
-        {{-- Card --}}
-        <div class="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl shadow-slate-900/5 dark:shadow-none overflow-hidden">
+        {{-- ===== BOOKING CONTENT ===== --}}
+        <div class="relative">
 
             {{-- Conflict Error --}}
             @if($conflict_error)
-            <div class="border-b border-red-100 bg-red-50 px-6 py-4 flex items-start gap-3">
+            <div class="border-b border-red-100 bg-red-50 px-6 py-4 flex items-start gap-3 rounded-t-3xl shadow-sm z-10 relative">
                 <svg class="h-5 w-5 flex-shrink-0 text-red-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <div>
                     <p class="text-sm font-semibold text-red-800">Jadwal Tidak Tersedia</p>
@@ -97,333 +69,337 @@
             </div>
             @endif
 
-            {{-- ===== STEP 1: SCHEDULE ===== --}}
-            @if($current_step === 1)
-            <div class="p-4 sm:p-8">
-                <h2 class="text-xl font-bold text-slate-800 dark:text-white mb-1">Pilih Fasilitas & Jadwal</h2>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mb-7">Pilih kategori fasilitas lalu tentukan tanggal reservasi.</p>
+            <div class="p-4 sm:p-6 lg:p-8 relative">
+                
+                @if($current_step === 1)
+                {{-- STEP 1: Browse (Tanggal, Kategori, Unit) --}}
+                <div class="w-full max-w-4xl mx-auto space-y-6"
+                     x-data="{}"
+                     x-transition:enter="transition ease-out duration-500"
+                     x-transition:enter-start="opacity-0 translate-y-8"
+                     x-transition:enter-end="opacity-100 translate-y-0">
+                    
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 lg:p-8">
+                        <h2 class="text-xl font-bold text-slate-800 dark:text-white mb-1">Pilih Fasilitas & Jadwal</h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-7">Pilih kategori fasilitas lalu tentukan tanggal reservasi.</p>
 
-                {{-- Date Range (dipindah ke atas agar user tahu dulu ketersediaan) --}}
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Tanggal Mulai <span class="text-red-500">*</span></label>
-                        <input type="date" wire:model.live="start_date"
-                               min="{{ now()->addDay()->format('Y-m-d') }}"
-                               class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/30 transition-all">
-                        @error('start_date')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Tanggal Selesai <span class="text-red-500">*</span></label>
-                        <input type="date" wire:model.live="end_date"
-                               min="{{ $start_date ?: now()->addDay()->format('Y-m-d') }}"
-                               class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/30 transition-all">
-                        @error('end_date')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
-                    </div>
-                </div>
+                        {{-- Date Range --}}
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Tanggal Mulai <span class="text-red-500">*</span></label>
+                                <input type="date" wire:model.live="start_date"
+                                       min="{{ now()->addDay()->format('Y-m-d') }}"
+                                       class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/30 transition-all">
+                                @error('start_date')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Tanggal Selesai <span class="text-red-500">*</span></label>
+                                <input type="date" wire:model.live="end_date"
+                                       min="{{ $start_date ?: now()->addDay()->format('Y-m-d') }}"
+                                       class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/30 transition-all">
+                                @error('end_date')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
+                            </div>
+                        </div>
 
-                {{-- Facility Type Selection (Category Cards with Carousel) --}}
-                <div class="mb-6">
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
-                        Kategori Fasilitas <span class="text-red-500">*</span>
-                        <span class="font-normal text-slate-400 text-xs ml-1">({{ count($facilityTypes) }} tersedia)</span>
-                    </label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        @foreach($facilityTypes as $type)
-                        @php $typeImages = $type->all_image_paths; @endphp
-                        <label class="relative flex flex-col cursor-pointer rounded-2xl border-2 overflow-hidden transition-all duration-200 group
-                                      {{ $facility_type_id === (string)$type->id ? 'border-blue-500 ring-2 ring-blue-300/50 dark:ring-blue-500/30' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500/50' }}">
-                            <input type="radio" wire:model.live="facility_type_id" value="{{ $type->id }}" class="sr-only">
+                        {{-- Facility Type Selection (Horizontal Scroll) --}}
+                        <div class="mb-2">
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">
+                                Kategori Fasilitas <span class="text-red-500">*</span>
+                                <span class="font-normal text-slate-400 text-xs ml-1">({{ count($facilityTypes) }} tersedia)</span>
+                            </label>
+                            
+                            <style>
+                                .hide-scrollbar::-webkit-scrollbar { display: none; }
+                                .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                            </style>
+                            
+                            <div class="flex overflow-x-auto pb-4 gap-4 snap-x hide-scrollbar scroll-smooth">
+                                @foreach($facilityTypes as $type)
+                                @php $typeImages = $type->all_image_paths; @endphp
+                                <label class="flex-shrink-0 snap-start relative flex flex-col cursor-pointer rounded-2xl border-2 overflow-hidden transition-all duration-200 group
+                                              {{ $facility_type_id === (string)$type->id ? 'border-blue-500 ring-2 ring-blue-300/50 dark:ring-blue-500/30 shadow-md' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500/50' }}"
+                                       style="width: 260px; min-width: 260px; max-width: 85vw;">
+                                    <input type="radio" wire:model.live="facility_type_id" value="{{ $type->id }}" class="sr-only">
 
-                            {{-- Image Carousel --}}
-                            <div class="relative h-40 w-full bg-slate-100 dark:bg-slate-700 overflow-hidden" id="carousel-{{ $type->id }}" data-images="{{ json_encode(array_map(function($p){return asset('storage/'.$p);}, $typeImages)) }}">
-                                @if(count($typeImages) > 0)
-                                    <div class="flex h-full transition-transform duration-300 ease-in-out carousel-track" data-current="0">
-                                        @foreach($typeImages as $index => $imgPath)
-                                        <div class="flex-shrink-0 w-full h-full">
-                                            <img src="{{ asset('storage/' . $imgPath) }}"
-                                                 alt="{{ $type->name }}"
-                                                 class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-zoom-in"
-                                                 onclick="openLightbox(event, '{{ $type->id }}', {{ $index }}, '{{ addslashes($type->name) }}')"
-                                                 title="Klik untuk perbesar foto">
+                                    {{-- Image Carousel --}}
+                                    <div class="relative w-full flex-shrink-0 bg-slate-100 dark:bg-slate-700 overflow-hidden" style="height: 160px;" id="carousel-{{ $type->id }}" data-images="{{ json_encode(array_map(function($p){return asset('storage/'.$p);}, $typeImages)) }}">
+                                        @if(count($typeImages) > 0)
+                                            <div class="flex h-full transition-transform duration-300 ease-in-out carousel-track" data-current="0">
+                                                @foreach($typeImages as $index => $imgPath)
+                                                <div class="flex-shrink-0 w-full h-full">
+                                                    <img src="{{ asset('storage/' . $imgPath) }}"
+                                                         alt="{{ $type->name }}"
+                                                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-zoom-in"
+                                                         onclick="openLightbox(event, '{{ $type->id }}', {{ $index }}, '{{ addslashes($type->name) }}')"
+                                                         title="Klik untuk perbesar foto">
+                                                </div>
+                                                @endforeach
+                                            </div>
+
+                                            {{-- Prev/Next Arrows --}}
+                                            @if(count($typeImages) > 1)
+                                            <button type="button"
+                                                    class="carousel-prev absolute left-1.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                                                    onclick="carouselSlide(event, '{{ $type->id }}', -1)">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                                            </button>
+                                            <button type="button"
+                                                    class="carousel-next absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                                                    onclick="carouselSlide(event, '{{ $type->id }}', 1)">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                                            </button>
+                                            {{-- Dots --}}
+                                            <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 carousel-dots">
+                                                @foreach($typeImages as $i => $imgPath)
+                                                <button type="button" onclick="carouselGoTo(event, '{{ $type->id }}', {{ $i }})"
+                                                        class="carousel-dot h-1.5 rounded-full transition-all {{ $i === 0 ? 'w-4 bg-white' : 'w-1.5 bg-white/50' }}"></button>
+                                                @endforeach
+                                            </div>
+                                            @endif
+
+                                            <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
+                                        @else
+                                            <div class="w-full h-full flex flex-col items-center justify-center gap-2">
+                                                <svg class="h-8 w-8 text-slate-300 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                <p class="text-xs text-slate-400">Foto belum tersedia</p>
+                                            </div>
+                                        @endif
+
+                                        {{-- Selected checkmark --}}
+                                        @if($facility_type_id === (string)$type->id)
+                                        <div class="absolute top-2 left-2 h-6 w-6 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center shadow">
+                                            <svg class="h-3.5 w-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                                         </div>
-                                        @endforeach
-                                    </div>
-
-                                    {{-- Prev/Next Arrows (only if multiple images) --}}
-                                    @if(count($typeImages) > 1)
-                                    <button type="button"
-                                            class="carousel-prev absolute left-1.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
-                                            onclick="carouselSlide(event, '{{ $type->id }}', -1)">
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
-                                    </button>
-                                    <button type="button"
-                                            class="carousel-next absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
-                                            onclick="carouselSlide(event, '{{ $type->id }}', 1)">
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
-                                    </button>
-                                    {{-- Dots --}}
-                                    <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 carousel-dots">
-                                        @foreach($typeImages as $i => $imgPath)
-                                        <button type="button" onclick="carouselGoTo(event, '{{ $type->id }}', {{ $i }})"
-                                                class="carousel-dot h-1.5 rounded-full transition-all {{ $i === 0 ? 'w-4 bg-white' : 'w-1.5 bg-white/50' }}"></button>
-                                        @endforeach
-                                    </div>
-                                    {{-- Photo count --}}
-                                    <div class="absolute top-2 right-2">
-                                        <span class="inline-flex items-center gap-1 rounded-lg bg-black/50 backdrop-blur-sm px-1.5 py-0.5 text-[10px] font-bold text-white">
-                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                            {{ count($typeImages) }}
-                                        </span>
-                                    </div>
-                                    @endif
-
-                                    <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
-                                @else
-                                    <div class="w-full h-full flex flex-col items-center justify-center gap-2">
-                                        <svg class="h-8 w-8 text-slate-300 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                        <p class="text-xs text-slate-400">Foto belum tersedia</p>
-                                    </div>
-                                @endif
-
-                                {{-- Selected checkmark --}}
-                                @if($facility_type_id === (string)$type->id)
-                                <div class="absolute top-2 left-2 h-6 w-6 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center shadow">
-                                    <svg class="h-3.5 w-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                                </div>
-                                @endif
-                            </div>
-
-                            {{-- Card Body --}}
-                            <div class="p-3.5 flex-1 flex flex-col {{ $facility_type_id === (string)$type->id ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-slate-800/50' }}">
-                                <div class="flex items-start justify-between gap-2">
-                                    <p class="font-bold text-slate-800 dark:text-slate-100 text-sm leading-snug">{{ $type->name }}</p>
-                                    <span class="flex-shrink-0 text-xs font-bold text-blue-700 dark:text-blue-400">
-                                        {{ $type->daily_rate_formatted }}<span class="font-normal text-slate-400 text-[10px]">/hari</span>
-                                    </span>
-                                </div>
-                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 flex-1">{{ $type->description }}</p>
-                                <p class="text-[10px] text-slate-400 mt-1.5">
-                                    {{ $type->active_buildings_count }} unit tersedia
-                                    @if(count($typeImages) > 0)
-                                    · <span class="text-blue-500 cursor-pointer" onclick="openLightbox('{{ $type->id }}', 0, '{{ addslashes($type->name) }}')">Lihat foto ↗</span>
-                                    @endif
-                                </p>
-                            </div>
-                        </label>
-                        @endforeach
-                    </div>
-                    @error('facility_type_id')<p class="mt-2 text-xs font-medium text-red-500">{{ $message }}</p>@enderror
-                </div>
-
-                {{-- Unit Selection (shows after category picked) --}}
-                @if($facility_type_id)
-                <div class="mb-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700/50">
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
-                        Pilih Unit / Ruangan <span class="text-red-500">*</span>
-                    </label>
-
-                    @if(count($buildings) > 0)
-                    <div class="space-y-2">
-                        @foreach($buildings as $building)
-                        @if($building->is_booked)
-                            {{-- BOOKED: Disabled card --}}
-                            <div class="flex items-center justify-between rounded-xl border-2 border-red-100 dark:border-red-900/40 bg-red-50/60 dark:bg-red-900/10 p-3 opacity-75 cursor-not-allowed">
-                                <div class="flex items-center gap-3 min-w-0">
-                                    <div class="h-4 w-4 flex-shrink-0 rounded-full border-2 border-red-300 bg-red-100 dark:border-red-700 dark:bg-red-900/40"></div>
-                                    <div class="min-w-0">
-                                        <p class="font-medium text-slate-600 dark:text-slate-400 text-sm line-through decoration-red-400">{{ $building->name }}</p>
-                                        <p class="text-xs text-red-500 dark:text-red-400 mt-0.5 flex items-center gap-1">
-                                            <svg class="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                            {{ $building->status_message }}
-                                        </p>
-                                    </div>
-                                </div>
-                                <span class="flex-shrink-0 ml-2 inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/50 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:text-red-400 whitespace-nowrap">
-                                    {{ $building->status_badge }}
-                                </span>
-                            </div>
-                        @else
-                            {{-- AVAILABLE: Selectable card --}}
-                            <label class="flex items-center justify-between rounded-xl border-2 p-3 cursor-pointer transition-all duration-150
-                                          {{ $building_id === (string)$building->id
-                                             ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-sm'
-                                             : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/30' }}">
-                                <input type="radio" wire:model.live="building_id" value="{{ $building->id }}" class="sr-only">
-                                <div class="flex items-center gap-3">
-                                    <div class="h-4 w-4 flex-shrink-0 rounded-full border-2 transition-all {{ $building_id === (string)$building->id ? 'border-blue-600 bg-blue-600' : 'border-slate-300 dark:border-slate-600' }} flex items-center justify-center">
-                                        @if($building_id === (string)$building->id)
-                                        <div class="h-1.5 w-1.5 rounded-full bg-white"></div>
                                         @endif
                                     </div>
-                                    <p class="font-medium text-slate-800 dark:text-slate-100 text-sm">{{ $building->name }}</p>
-                                </div>
-                                @if($building_id === (string)$building->id)
-                                <span class="flex-shrink-0 inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-400">
-                                    ✓ Dipilih
-                                </span>
-                                @else
-                                <span class="flex-shrink-0 inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:text-green-400">
-                                    Tersedia
-                                </span>
-                                @endif
+
+                                    {{-- Card Body --}}
+                                    <div class="p-3.5 flex-1 flex flex-col {{ $facility_type_id === (string)$type->id ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-slate-800/50' }}">
+                                        <div class="flex flex-col gap-1 mb-1.5">
+                                            <p class="font-bold text-slate-800 dark:text-slate-100 text-sm leading-snug line-clamp-2" title="{{ $type->name }}">{{ $type->name }}</p>
+                                            <span class="text-xs font-bold text-green-600 dark:text-green-400">
+                                                {{ $type->daily_rate_formatted }}<span class="font-normal text-slate-400 text-[10px]">/hari</span>
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 flex-1">{{ $type->description }}</p>
+                                        <p class="text-[10px] text-slate-400 mt-2 flex flex-wrap gap-1 items-center">
+                                            @if($type->dynamic_available_count > 0)
+                                                <span class="text-slate-500 dark:text-slate-400">{{ $type->dynamic_available_count }} unit tersedia</span>
+                                            @else
+                                                <span class="text-red-500 font-semibold">Tidak tersedia (Penuh)</span>
+                                            @endif
+                                            
+                                            @if(count($typeImages) > 0)
+                                            <span>·</span>
+                                            <span class="text-blue-500 hover:text-blue-600 cursor-pointer relative z-10" onclick="openLightbox(event, '{{ $type->id }}', 0, '{{ addslashes($type->name) }}')">Lihat foto ↗</span>
+                                            @endif
+                                        </p>
+                                    </div>
+                                </label>
+                                @endforeach
+                            </div>
+                            @error('facility_type_id')<p class="mt-2 text-xs font-medium text-red-500">{{ $message }}</p>@enderror
+                        </div>
+
+                    </div>
+
+                    {{-- Unit Selection (shows after category picked) --}}
+                    <div x-data="{ show: @entangle('facility_type_id') }"
+                         x-show="show"
+                         x-transition:enter="transition ease-out duration-500 delay-100"
+                         x-transition:enter-start="opacity-0 translate-y-8"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         style="display: none;">
+                        
+                        @if($facility_type_id)
+                        <div class="p-4 sm:p-6 lg:p-8 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                            <label class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-4">
+                                Pilih Unit / Ruangan <span class="text-red-500">*</span>
                             </label>
-                        @endif
-                        @endforeach
-                    </div>
-                    @else
-                    <p class="text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
-                        Tidak ada unit yang tersedia untuk kategori ini.
-                    </p>
-                    @endif
-                    @error('building_id')<p class="mt-2 text-xs font-medium text-red-500">{{ $message }}</p>@enderror
-                </div>
-                @endif
 
-                {{-- Cost Estimate --}}
-                @if($selectedType && $building_id && $start_date && $end_date)
-                <div class="rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Estimasi Biaya</p>
-                            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                {{ $selectedType->daily_rate_formatted }} × {{ $durationDays }} hari
+                            @if(count($buildings) > 0)
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                @foreach($buildings as $building)
+                                @if($building->is_booked)
+                                    {{-- BOOKED: Disabled card --}}
+                                    <div class="flex items-center justify-between gap-2 sm:gap-3 rounded-xl border-2 border-red-100 dark:border-red-900/40 bg-red-50/60 dark:bg-red-900/10 p-3 opacity-75 cursor-not-allowed">
+                                        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                                            <div class="h-4 w-4 flex-shrink-0 rounded-full border-2 border-red-300 bg-red-100 dark:border-red-700 dark:bg-red-900/40"></div>
+                                            <div class="min-w-0">
+                                                <p class="font-bold text-slate-600 dark:text-slate-400 text-sm line-through decoration-red-400 truncate">{{ $building->name }}</p>
+                                                <p class="text-[10px] sm:text-xs text-red-500 dark:text-red-400 mt-0.5 flex items-center gap-1">
+                                                    <svg class="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                    <span class="truncate">{{ $building->status_message }}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span class="flex-shrink-0 inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/50 px-2.5 py-0.5 text-[10px] font-bold text-red-700 dark:text-red-400 whitespace-nowrap">
+                                            {{ $building->status_badge }}
+                                        </span>
+                                    </div>
+                                @else
+                                    {{-- AVAILABLE: Selectable card --}}
+                                    <label class="flex items-center justify-between gap-2 sm:gap-3 rounded-xl border-2 p-3 cursor-pointer transition-all duration-200
+                                                  {{ $building_id === (string)$building->id
+                                                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-md ring-1 ring-blue-500/20'
+                                                     : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 hover:shadow-sm' }}">
+                                        <input type="radio" wire:model.live="building_id" value="{{ $building->id }}" class="sr-only">
+                                        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                                            <div class="h-4 w-4 flex-shrink-0 rounded-full border-2 transition-all {{ $building_id === (string)$building->id ? 'border-blue-600 bg-blue-600' : 'border-slate-300 dark:border-slate-600' }} flex items-center justify-center">
+                                                @if($building_id === (string)$building->id)
+                                                <div class="h-1.5 w-1.5 rounded-full bg-white"></div>
+                                                @endif
+                                            </div>
+                                            <p class="font-bold text-slate-800 dark:text-slate-100 text-sm truncate">{{ $building->name }}</p>
+                                        </div>
+                                        @if($building_id === (string)$building->id)
+                                        <span class="flex-shrink-0 inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/50 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-400">
+                                            ✓ Dipilih
+                                        </span>
+                                        @else
+                                        <span class="flex-shrink-0 inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-[10px] font-bold text-green-700 dark:text-green-400">
+                                            Tersedia
+                                        </span>
+                                        @endif
+                                    </label>
+                                @endif
+                                @endforeach
+                            </div>
+                            @else
+                            <p class="text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 text-center font-medium">
+                                Maaf, tidak ada unit yang tersedia untuk kategori ini pada tanggal tersebut.
                             </p>
+                            @endif
+                            @error('building_id')<p class="mt-3 text-xs font-bold text-red-500">{{ $message }}</p>@enderror
                         </div>
-                        <p class="text-2xl font-black text-blue-700 dark:text-blue-400">Rp {{ number_format($estimatedTotal, 0, ',', '.') }}</p>
+                        </div>
+                        @endif
                     </div>
+                    
+                    {{-- Next Step Button --}}
+                    @if($building_id && $facility_type_id && $start_date && $end_date)
+                    <div class="flex justify-end mt-6">
+                        <button wire:click="nextStep" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-xl shadow-blue-500/30 hover:bg-blue-700 hover:shadow-2xl transition-all">
+                            Lanjut Isi Data Pemohon
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                    @endif
+                    
                 </div>
                 @endif
-            </div>
 
-            {{-- ===== STEP 2: DYNAMIC FORM ===== --}}
-            @elseif($current_step === 2)
-            <div class="p-4 sm:p-8">
-                <h2 class="text-xl font-bold text-slate-800 dark:text-white mb-1">Data Pemohon</h2>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mb-7">Lengkapi formulir berikut sesuai data diri Anda.</p>
+                @if($current_step === 2)
+                {{-- STEP 2: Estimasi & Form --}}
+                <div class="w-full max-w-3xl mx-auto"
+                     x-data="{}"
+                     x-init="window.scrollTo({top: 0, behavior: 'smooth'})"
+                     x-transition:enter="transition ease-out duration-500 delay-100"
+                     x-transition:enter-start="opacity-0 translate-y-8"
+                     x-transition:enter-end="opacity-100 translate-y-0">
+                    
+                    @if($selectedType && $building_id && $start_date && $end_date)
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 lg:p-8">
+                        
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-100 dark:border-slate-700/50">
+                            <div class="flex items-center gap-4">
+                                <button type="button" wire:click="previousStep" class="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition-all" title="Kembali">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                                </button>
+                                <div>
+                                    <h2 class="text-xl font-bold text-slate-800 dark:text-white mb-1">Data Pemohon</h2>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Lengkapi formulir berikut untuk menyelesaikan reservasi.</p>
+                                </div>
+                            </div>
+                        </div>
 
-                <div class="space-y-5">
-                    @foreach($fields as $field)
+                        {{-- Cost Estimate & Selected Facility --}}
+                        <div class="rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 sm:p-5 mb-8">
+                            <div class="mb-4 pb-4 border-b border-blue-200/50 dark:border-blue-800/50">
+                                <p class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Fasilitas Dipesan</p>
+                                <p class="text-base font-bold text-slate-800 dark:text-white">{{ $selectedType->name }}</p>
+                                @php
+                                    $selectedBuilding = $buildings->firstWhere('id', $building_id);
+                                @endphp
+                                @if($selectedBuilding)
+                                    <p class="text-sm font-medium text-slate-600 dark:text-slate-300 mt-0.5">Unit: <span class="font-bold">{{ $selectedBuilding->name }}</span></p>
+                                @endif
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    <span class="font-semibold">{{ \Carbon\Carbon::parse($start_date)->isoFormat('D MMMM Y') }}</span> s/d <span class="font-semibold">{{ \Carbon\Carbon::parse($end_date)->isoFormat('D MMMM Y') }}</span>
+                                </p>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Estimasi Biaya</p>
+                                    <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                        {{ $selectedType->daily_rate_formatted }} × {{ $durationDays }} hari
+                                    </p>
+                                </div>
+                                <p class="text-2xl font-black text-blue-700 dark:text-blue-400">Rp {{ number_format($estimatedTotal, 0, ',', '.') }}</p>
+                            </div>
+                        </div>
+
+                    {{-- Form Data Pemohon --}}
                     <div>
-                        <label for="field_{{ $field->field_name }}" class="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
-                            {{ $field->field_label }}
-                            @if($field->is_required)<span class="text-red-500">*</span>@endif
-                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mb-8">
+                            @foreach($fields as $field)
+                            <div class="{{ $field->field_type === 'textarea' ? 'sm:col-span-2' : '' }}">
+                                <label for="field_{{ $field->field_name }}" class="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
+                                    {{ $field->field_label }}
+                                    @if($field->is_required)<span class="text-red-500">*</span>@endif
+                                </label>
 
-                        @if($field->field_type === 'textarea')
-                        <textarea id="field_{{ $field->field_name }}"
-                                  wire:model="customer_data.{{ $field->field_name }}"
-                                  placeholder="{{ $field->placeholder }}"
-                                  rows="3"
-                                  class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/30 transition-all resize-none"></textarea>
-                        @else
-                        <input type="{{ $field->field_type }}"
-                               id="field_{{ $field->field_name }}"
-                               wire:model="customer_data.{{ $field->field_name }}"
-                               placeholder="{{ $field->placeholder }}"
-                               class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/30 transition-all">
-                        @endif
-                        @error("customer_data.{$field->field_name}")
-                            <p class="mt-1.5 text-xs text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    @endforeach
+                                @if($field->field_type === 'textarea')
+                                <textarea id="field_{{ $field->field_name }}"
+                                          wire:model="customer_data.{{ $field->field_name }}"
+                                          placeholder="{{ $field->placeholder }}"
+                                          rows="3"
+                                          class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/30 transition-all resize-none"></textarea>
+                                @else
+                                <input type="{{ $field->field_type }}"
+                                       id="field_{{ $field->field_name }}"
+                                       wire:model="customer_data.{{ $field->field_name }}"
+                                       placeholder="{{ $field->placeholder }}"
+                                       class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500/30 transition-all">
+                                @endif
+                                @error("customer_data.{$field->field_name}")
+                                    <p class="mt-1.5 text-xs text-red-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            @endforeach
 
-                    @if($fields->isEmpty())
-                    <div class="rounded-xl border border-orange-100 bg-orange-50 p-4 text-sm text-orange-700">
-                        Admin belum mengkonfigurasi kolom formulir. Silakan hubungi admin.
+                            @if($fields->isEmpty())
+                            <div class="sm:col-span-2 rounded-xl border border-orange-100 bg-orange-50 p-4 text-sm text-orange-700">
+                                Admin belum mengkonfigurasi kolom formulir. Silakan hubungi admin.
+                            </div>
+                            @endif
+                        </div>
+                        
+                        <div class="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800 mb-6">
+                            <p class="font-semibold mb-1">⚠️ Perhatikan</p>
+                            <ul class="list-disc list-inside space-y-1 text-xs">
+                                <li>Reservasi akan terkunci selama 24 jam menunggu tagihan dari Admin.</li>
+                                <li>Setelah tagihan diterima, Anda memiliki 72 jam untuk melakukan pembayaran.</li>
+                                <li>Reservasi yang melewati batas waktu akan otomatis dibatalkan.</li>
+                            </ul>
+                        </div>
+                        
+                        {{-- Submit Button --}}
+                        <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/50">
+                            <button wire:click="confirmBooking"
+                                    wire:loading.attr="disabled"
+                                    wire:target="confirmBooking"
+                                    class="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 text-base font-bold text-white shadow-xl shadow-blue-500/30 hover:from-blue-700 hover:to-indigo-700 hover:shadow-2xl transition-all disabled:opacity-60">
+                                <svg wire:loading.remove wire:target="confirmBooking" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <svg wire:loading wire:target="confirmBooking" class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                                <span wire:loading.remove wire:target="confirmBooking">Selesaikan Reservasi</span>
+                                <span wire:loading wire:target="confirmBooking">Memproses Reservasi...</span>
+                            </button>
+                        </div>
+
                     </div>
                     @endif
                 </div>
-            </div>
-
-            {{-- ===== STEP 3: CONFIRMATION ===== --}}
-            @elseif($current_step === 3)
-            <div class="p-4 sm:p-8">
-                <h2 class="text-xl font-bold text-slate-800 dark:text-white mb-1">Konfirmasi Reservasi</h2>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mb-7">Periksa kembali data reservasi Anda sebelum mengirimkan.</p>
-
-                {{-- Summary Card --}}
-                <div class="rounded-2xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/50 divide-y divide-slate-100 dark:divide-slate-700/50 mb-6 overflow-hidden">
-                    <div class="p-4">
-                        <p class="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-1">Kategori Fasilitas</p>
-                        <p class="font-semibold text-slate-800 dark:text-slate-100">{{ $selectedType?->name ?? '—' }}</p>
-                    </div>
-                    <div class="p-4">
-                        <p class="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-1">Unit / Ruangan</p>
-                        <p class="font-semibold text-slate-800 dark:text-slate-100">
-                            {{ collect($buildings)->firstWhere('id', $building_id)?->name ?? '—' }}
-                        </p>
-                    </div>
-                    <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-1">Tanggal Mulai</p>
-                            <p class="font-semibold text-slate-800 dark:text-slate-100">{{ \Carbon\Carbon::parse($start_date)->isoFormat('D MMM YYYY') }}</p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-1">Tanggal Selesai</p>
-                            <p class="font-semibold text-slate-800 dark:text-slate-100">{{ \Carbon\Carbon::parse($end_date)->isoFormat('D MMM YYYY') }}</p>
-                        </div>
-                    </div>
-                    <div class="p-4">
-                        <p class="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-1">Durasi</p>
-                        <p class="font-semibold text-slate-800 dark:text-slate-100">{{ $durationDays }} hari</p>
-                    </div>
-                    @foreach($fields as $field)
-                    @if(!empty($customer_data[$field->field_name]))
-                    <div class="p-4">
-                        <p class="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-1">{{ $field->field_label }}</p>
-                        <p class="font-semibold text-slate-800 dark:text-slate-100">{{ $customer_data[$field->field_name] }}</p>
-                    </div>
-                    @endif
-                    @endforeach
-                </div>
-
-                {{-- Total --}}
-                <div class="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 p-5 text-white mb-6">
-                    <p class="text-sm font-medium text-blue-200">Estimasi Total PNBP</p>
-                    <p class="text-3xl font-bold mt-1">Rp {{ number_format($estimatedTotal, 0, ',', '.') }}</p>
-                    <p class="text-xs text-blue-300 mt-1">*Nominal resmi sesuai tagihan SIMPONI dari Admin</p>
-                </div>
-
-                <div class="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800 mb-6">
-                    <p class="font-semibold mb-1">⚠️ Perhatikan</p>
-                    <ul class="list-disc list-inside space-y-1 text-xs">
-                        <li>Reservasi akan terkunci selama 24 jam menunggu tagihan dari Admin.</li>
-                        <li>Setelah tagihan diterima, Anda memiliki 72 jam untuk melakukan pembayaran.</li>
-                        <li>Reservasi yang melewati batas waktu akan otomatis dibatalkan.</li>
-                    </ul>
-                </div>
-            </div>
-            @endif
-
-            {{-- Navigation Buttons --}}
-            <div class="border-t border-slate-100 dark:border-slate-700/50 px-4 sm:px-8 py-4 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
-                <button @if($current_step > 1) wire:click="prevStep" @endif
-                        class="{{ $current_step === 1 ? 'invisible' : '' }} flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                    Kembali
-                </button>
-
-                @if($current_step < $total_steps)
-                <button wire:click="nextStep"
-                        wire:loading.attr="disabled"
-                        wire:target="nextStep"
-                        class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/30 hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-60">
-                    <span wire:loading.remove wire:target="nextStep">Lanjut</span>
-                    <span wire:loading wire:target="nextStep">Memproses...</span>
-                    <svg wire:loading.remove wire:target="nextStep" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    <svg wire:loading wire:target="nextStep" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                </button>
-                @else
-                <button wire:click="confirmBooking"
-                        wire:loading.attr="disabled"
-                        wire:target="confirmBooking"
-                        class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-green-500/30 hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-60">
-                    <svg wire:loading.remove wire:target="confirmBooking" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    <svg wire:loading wire:target="confirmBooking" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                    <span wire:loading.remove wire:target="confirmBooking">Kirim Reservasi</span>
-                    <span wire:loading wire:target="confirmBooking">Mengunci jadwal...</span>
-                </button>
                 @endif
             </div>
 
@@ -434,10 +410,9 @@
         <p class="text-center text-xs text-slate-400 dark:text-slate-500 mt-8">
             @php
                 $copyrightText = \App\Models\AppSetting::getVal('copyright_text', '© ' . date('Y') . ' ' . $appName);
-                $footerText = \App\Models\AppSetting::getVal('footer_text', 'Sistem Reservasi Gedung Internal.');
                 $copyrightWithHiddenLink = str_replace('©', '<a href="' . route('login') . '" class="hover:text-slate-400 dark:hover:text-slate-500" style="text-decoration:none;color:inherit;cursor:text;">©</a>', $copyrightText);
             @endphp
-            {!! $copyrightWithHiddenLink !!}. {{ $footerText }}
+            {!! $copyrightWithHiddenLink !!}
         </p>
 
     </div>

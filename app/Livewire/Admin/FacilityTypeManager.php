@@ -137,6 +137,14 @@ class FacilityTypeManager extends Component
         }
     }
 
+    public function removeNewGalleryImage($index)
+    {
+        if (isset($this->galleryImages[$index])) {
+            unset($this->galleryImages[$index]);
+            $this->galleryImages = array_values($this->galleryImages); // Re-index array
+        }
+    }
+
     public function delete($id)
     {
         $type = FacilityType::with('images')->findOrFail($id);
