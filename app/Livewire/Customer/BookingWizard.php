@@ -1,0 +1,244 @@
+<?php
+
+namespace App\Livewire\Customer;
+
+use App\Enums\ReservationStatus;
+use App\Models\BookingFormField;
+use App\Models\Building;
+use App\Models\FacilityType;
+use App\Models\Reservation;
+use App\Services\ReservationService;
+use Livewire\Attributes\Title;
+use Livewire\Component;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+
+#[Title('Booking Gedung — SI-RESERVASI PNBP')]
+class BookingWizard extends Component
+{
+    // --- Step State ---
+    public int    $current_step  = 1;
+    public int    $total_steps   = 3;
+
+    // --- Step 1: Schedule ---
+    public string $facility_type_id = '';
+    public string $building_id = '';
+    public string $start_date  = '';
+    public string $end_date    = '';
+
+    // --- Step 2: Dynamic Form ---
+    public array $customer_data = [];
+
+    // --- Step 3: Confirmation ---
+    public bool   $booking_success = false;
+    public string $reservation_id  = '';
+    public string $conflict_error  = '';
+
+    public function mount(): void
+    {
+        $this->start_date = now()->addDay()->format('Y-m-d');
+        $this->end_date   = now()->addDays(2)->format('Y-m-d');
+    }
+
+    public function updatedFacilityTypeId()
+    {
+        $this->building_id = '';
+    }
+
+    public function updatedStartDate()
+    {
+        // Re-check availability when dates change
+        $this->building_id = '';
+    }
+
+    public function updatedEndDate()
+    {
+        $this->building_id = '';
+    }
+
+    public function nextStep(): void
+    {
+        $this->conflict_error = '';
+
+        if ($this->current_step === 1) {
+            $this->validateStep1();
+        } elseif ($this->current_step === 2) {
+            $this->validateStep2();
+        }
+
+        if ($this->current_step < $this->total_steps) {
+            $this->current_step++;
+        }
+    }
+
+    public function prevStep(): void
+    {
+        if ($this->current_step > 1) {
+            $this->current_step--;
+        }
+    }
+
+    private function validateStep1(): void
+    {
+        $this->validate([
+            'facility_type_id' => ['required', 'exists:facility_types,id'],
+            'building_id' => ['required', 'exists:buildings,id'],
+            'start_date'  => ['required', 'date', 'after_or_equal:today'],
+            'end_date'    => ['required', 'date', 'after_or_equal:start_date'],
+        ], [
+            'facility_type_id.required' => 'Pilih kategori fasilitas terlebih dahulu.',
+            'building_id.required'   => 'Pilih unit ruangan yang tersedia.',
+            'building_id.exists'     => 'Unit tidak valid.',
+            'start_date.required'    => 'Tanggal mulai wajib diisi.',
+            'start_date.after_or_equal' => 'Tanggal mulai tidak boleh di masa lalu.',
+            'end_date.required'      => 'Tanggal selesai wajib diisi.',
+            'end_date.after_or_equal' => 'Tanggal selesai harus setelah atau sama dengan tanggal mulai.',
+        ]);
+
+        // Double-check availability
+        if (Reservation::hasConflict($this->building_id, $this->start_date, $this->end_date)) {
+            $this->addError('building_id', 'Unit ini sudah dipesan untuk tanggal tersebut. Pilih unit lain.');
+            return;
+        }
+    }
+
+    private function validateStep2(): void
+    {
+        $fields = BookingFormField::ordered()->get();
+        $rules  = [];
+        $messages = [];
+
+        foreach ($fields as $field) {
+            $key = "customer_data.{$field->field_name}";
+
+            $fieldRules = [];
+            if ($field->is_required) {
+                $fieldRules[] = 'required';
+                $messages["{$key}.required"] = "{$field->field_label} wajib diisi.";
+            } else {
+                $fieldRules[] = 'nullable';
+            }
+
+            match ($field->field_type) {
+                'number' => $fieldRules[] = 'numeric',
+                'date'   => $fieldRules[] = 'date',
+                'email'  => $fieldRules[] = 'email',
+                default  => null,
+            };
+
+            $rules[$key] = $fieldRules;
+        }
+
+        if (!empty($rules)) {
+            $this->validate($rules, $messages);
+        }
+    }
+
+    public function confirmBooking(ReservationService $service): void
+    {
+        $this->conflict_error = '';
+
+        try {
+            $reservation = $service->lockAndBook(
+                buildingId:   $this->building_id,
+                userId:       auth()->id(),
+                startDate:    $this->start_date,
+                endDate:      $this->end_date,
+                customerData: $this->customer_data,
+            );
+
+            $this->reservation_id  = $reservation->id;
+            $this->booking_success = true;
+
+        } catch (ConflictHttpException $e) {
+            $this->conflict_error = $e->getMessage();
+        }
+    }
+
+    /**
+     * Check if a building has a conflicting reservation for the selected dates.
+     */
+    private function getBuildingConflict(string $buildingId): ?Reservation
+    {
+        if (!$this->start_date || !$this->end_date) return null;
+
+        return Reservation::where('building_id', $buildingId)
+            ->whereNotIn('status', [
+                ReservationStatus::REJECTED->value,
+                ReservationStatus::EXPIRED->value,
+            ])
+            ->where(function ($q) {
+                $q->whereBetween('start_date', [$this->start_date, $this->end_date])
+                  ->orWhereBetween('end_date', [$this->start_date, $this->end_date])
+                  ->orWhere(function ($q2) {
+                      $q2->where('start_date', '<=', $this->start_date)
+                         ->where('end_date', '>=', $this->end_date);
+                  });
+            })
+            ->first();
+    }
+
+    public function render()
+    {
+        $fields = BookingFormField::ordered()->get();
+
+        // Only show facility types that have at least 1 building (active or inactive)
+        $facilityTypes = FacilityType::withCount('activeBuildings')
+            ->with('images')
+            ->has('buildings')
+            ->orderBy('name')
+            ->get();
+
+        // Get buildings for selected type with availability info
+        $buildings = collect();
+        if ($this->facility_type_id) {
+            $rawBuildings = Building::where('facility_type_id', $this->facility_type_id)
+                ->orderBy('name')
+                ->get();
+
+            $buildings = $rawBuildings->map(function ($building) {
+                if (!$building->is_active) {
+                    $building->is_booked = true;
+                    $building->status_badge = '🚫 Non-Aktif';
+                    $building->status_message = 'Unit sedang dinonaktifkan (Maintenance)';
+                    return $building;
+                }
+
+                $conflict = $this->getBuildingConflict($building->id);
+                $building->is_booked = $conflict !== null;
+                if ($conflict) {
+                    $start = $conflict->start_date?->isoFormat('D MMM');
+                    $end = $conflict->end_date?->isoFormat('D MMM YYYY');
+                    $building->status_badge = '🔒 Penuh';
+                    $building->status_message = "Sudah dipesan: $start – $end";
+                }
+                
+                return $building;
+            });
+        }
+
+        $selectedType = $this->facility_type_id
+            ? FacilityType::find($this->facility_type_id)
+            : null;
+
+        $durationDays = 1;
+        if ($this->start_date && $this->end_date) {
+            try {
+                $durationDays = max(1, \Carbon\Carbon::parse($this->start_date)
+                    ->diffInDays(\Carbon\Carbon::parse($this->end_date)) + 1);
+            } catch (\Exception) {}
+        }
+
+        $estimatedTotal = $selectedType
+            ? $selectedType->daily_rate * $durationDays
+            : 0;
+
+        return view('livewire.customer.booking-wizard', [
+            'facilityTypes'  => $facilityTypes,
+            'buildings'      => $buildings,
+            'fields'         => $fields,
+            'selectedType'   => $selectedType,
+            'durationDays'   => $durationDays,
+            'estimatedTotal' => $estimatedTotal,
+        ])->layout('layouts.guest');
+    }
+}

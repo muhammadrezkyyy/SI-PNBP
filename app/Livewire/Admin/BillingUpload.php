@@ -1,0 +1,160 @@
+<?php
+
+namespace App\Livewire\Admin;
+
+use App\Models\Payment;
+use App\Models\Reservation;
+use App\Services\FonnteNotificationService;
+use App\Services\ReservationService;
+use App\Services\SimponiParserService;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Smalot\PdfParser\Parser as PdfParser;
+
+#[Title('Upload Tagihan SIMPONI ?" Admin')]
+#[Layout('layouts.admin')]
+class BillingUpload extends Component
+{
+    use WithFileUploads;
+
+    public Reservation $reservation;
+    public $simponi_pdf;
+    public bool $is_manual = false;
+    public string $manual_billing_code = '';
+    public string $manual_nominal = '';
+    
+    // Extracted Data
+    public ?string $extracted_billing_code = null;
+    public ?float $extracted_nominal = null;
+    public ?string $extracted_error = null;
+    public ?string $pdf_preview_url = null;
+    public ?string $raw_text = '';
+
+    public function mount(Reservation $reservation)
+    {
+        $this->reservation = $reservation;
+    }
+
+    public function updatedSimponiPdf()
+    {
+        $this->resetExtractedData();
+        $this->validateOnly('simponi_pdf', [
+            'simponi_pdf' => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        if ($this->simponi_pdf) {
+            $this->pdf_preview_url = $this->simponi_pdf->temporaryUrl();
+            $this->parsePdf();
+        }
+    }
+
+    private function resetExtractedData()
+    {
+        $this->extracted_billing_code = null;
+        $this->extracted_nominal = null;
+        $this->extracted_error = null;
+        $this->raw_text = '';
+    }
+
+    private function parsePdf()
+    {
+        try {
+            $parser = new PdfParser();
+            $pdf = $parser->parseFile($this->simponi_pdf->getRealPath());
+            $this->raw_text = $pdf->getText();
+
+            $simponiParser = app(SimponiParserService::class);
+            $parsed = $simponiParser->parsePdf($this->raw_text);
+
+            if ($parsed['status'] === 'success') {
+                $this->extracted_billing_code = $parsed['billing_code'];
+                $this->extracted_nominal = $parsed['nominal'];
+            } else {
+                $this->extracted_error = implode(' ', $parsed['errors']);
+                $this->is_manual = true; // Auto open manual mode on error
+            }
+        } catch (\Exception $e) {
+            $this->extracted_error = 'Gagal membaca PDF. Pastikan file tidak terenkripsi.';
+            $this->is_manual = true;
+        }
+    }
+
+    public function submit(
+        ReservationService $reservationService,
+        FonnteNotificationService $fonnte
+    ) {
+        $this->validate([
+            'simponi_pdf' => [$this->is_manual ? 'nullable' : 'required', 'file', 'mimes:pdf', 'max:10240'],
+        ]);
+
+        if ($this->is_manual) {
+            $this->validate([
+                'manual_billing_code' => ['required', 'string', 'size:15'],
+                'manual_nominal'      => ['required', 'numeric', 'min:0'],
+            ], [
+                'manual_billing_code.required' => 'Kode Billing wajib diisi jika mode manual aktif.',
+                'manual_billing_code.size'     => 'Kode Billing harus 15 digit.',
+                'manual_nominal.required'      => 'Nominal wajib diisi jika mode manual aktif.',
+            ]);
+
+            $billingCode = $this->manual_billing_code;
+            $nominal = $this->manual_nominal;
+            $rawLength = strlen($this->raw_text);
+        } else {
+            if ($this->extracted_error) {
+                $this->addError('simponi_pdf', $this->extracted_error);
+                return;
+            }
+            $billingCode = $this->extracted_billing_code;
+            $nominal = $this->extracted_nominal;
+            $rawLength = strlen($this->raw_text);
+        }
+
+        $pdfPath = null;
+        if ($this->simponi_pdf) {
+            $pdfPath = $this->simponi_pdf->store('simponi-pdfs', 'local');
+        }
+
+        // Create Payment record
+        $payment = Payment::create([
+            'reservation_id'       => $this->reservation->id,
+            'simponi_billing_code' => $billingCode,
+            'nominal'              => $nominal,
+            'simponi_pdf_path'     => $pdfPath,
+            'ocr_metadata'         => [
+                'raw_length'   => $rawLength,
+                'parsed_at'    => now()->toIso8601String(),
+                'parser'       => 'smalot/pdfparser',
+            ],
+        ]);
+
+        // Transition reservation status
+        $reservationService->transitionToWaitingPayment($this->reservation);
+
+        // Send WhatsApp billing instruction
+        $phoneNumber = $this->reservation->user->phone_number
+            ?? ($this->reservation->customer_data['whatsapp'] ?? null)
+            ?? ($this->reservation->customer_data['no_telp'] ?? null)
+            ?? ($this->reservation->customer_data['phone'] ?? null);
+
+        if ($phoneNumber) {
+            $fonnte->sendBillingInstruction(
+                $phoneNumber,
+                $billingCode,
+                (float) $nominal,
+                $this->reservation->id
+            );
+        }
+
+        session()->flash('success', 'Tagihan SIMPONI berhasil diupload dan instruksi pembayaran telah dikirim via WhatsApp.');
+        return redirect()->route('admin.reservations.show', $this->reservation);
+    }
+
+    public function render()
+    {
+        return view('livewire.admin.billing-upload');
+    }
+}
