@@ -20,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (config('app.url') && str_contains(config('app.url'), 'trycloudflare.com')) {
+        if (config('app.env') === 'production' || (config('app.url') && str_contains(config('app.url'), 'trycloudflare.com'))) {
             URL::forceRootUrl(config('app.url'));
             URL::forceScheme('https');
         }
