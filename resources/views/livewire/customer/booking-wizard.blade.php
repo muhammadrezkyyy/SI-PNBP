@@ -109,11 +109,13 @@
                             </label>
                             
                             <style>
-                                .hide-scrollbar::-webkit-scrollbar { display: none; }
-                                .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                                .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+                                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                                .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+                                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
                             </style>
                             
-                            <div class="flex overflow-x-auto pb-4 gap-4 snap-x hide-scrollbar scroll-smooth">
+                            <div class="flex overflow-x-auto pb-4 gap-4 snap-x custom-scrollbar scroll-smooth">
                                 @foreach($facilityTypes as $type)
                                 @php $typeImages = $type->all_image_paths; @endphp
                                 <label class="flex-shrink-0 snap-start relative flex flex-col cursor-pointer rounded-2xl border-2 overflow-hidden transition-all duration-200 group
@@ -201,19 +203,17 @@
                             @error('facility_type_id')<p class="mt-2 text-xs font-medium text-red-500">{{ $message }}</p>@enderror
                         </div>
 
-                    </div>
-
-                    {{-- Unit Selection (shows after category picked) --}}
-                    <div x-data="{ show: @entangle('facility_type_id') }"
-                         x-show="show"
-                         x-transition:enter="transition ease-out duration-500 delay-100"
-                         x-transition:enter-start="opacity-0 translate-y-8"
-                         x-transition:enter-end="opacity-100 translate-y-0"
-                         style="display: none;">
-                        
-                        @if($facility_type_id)
-                        <div class="p-4 sm:p-6 lg:p-8 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-                            <label class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-4">
+                        {{-- Unit Selection (shows after category picked) --}}
+                        <div x-data="{ show: @entangle('facility_type_id') }"
+                             x-show="show"
+                             x-transition:enter="transition ease-out duration-500"
+                             x-transition:enter-start="opacity-0 -translate-y-4"
+                             x-transition:enter-end="opacity-100 translate-y-0"
+                             style="display: none;">
+                            
+                            @if($facility_type_id)
+                            <div class="mt-4 pt-6 border-t border-slate-100 dark:border-slate-700/50">
+                                <label class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-4">
                                 Pilih Unit / Ruangan <span class="text-red-500">*</span>
                             </label>
 
@@ -271,21 +271,21 @@
                             </p>
                             @endif
                             @error('building_id')<p class="mt-3 text-xs font-bold text-red-500">{{ $message }}</p>@enderror
+                            </div>
+                            @endif
                         </div>
+                        
+                        {{-- Next Step Button --}}
+                        @if($building_id && $facility_type_id && $start_date && $end_date)
+                        <div class="flex justify-end mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/50">
+                            <button wire:click="nextStep" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-xl shadow-blue-500/30 hover:bg-blue-700 hover:shadow-2xl transition-all">
+                                Lanjut Isi Data Pemohon
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </button>
                         </div>
                         @endif
-                    </div>
-                    
-                    {{-- Next Step Button --}}
-                    @if($building_id && $facility_type_id && $start_date && $end_date)
-                    <div class="flex justify-end mt-6">
-                        <button wire:click="nextStep" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-xl shadow-blue-500/30 hover:bg-blue-700 hover:shadow-2xl transition-all">
-                            Lanjut Isi Data Pemohon
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </button>
-                    </div>
-                    @endif
-                    
+
+                    </div> {{-- /End Main Card --}}
                 </div>
                 @endif
 
