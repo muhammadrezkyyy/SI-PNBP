@@ -278,9 +278,9 @@
                         {{-- Next Step Button --}}
                         @if($building_id && $facility_type_id && $start_date && $end_date)
                         <div class="flex justify-end mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/50">
-                            <button wire:click="nextStep" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-xl shadow-blue-500/30 hover:bg-blue-700 hover:shadow-2xl transition-all">
-                                Lanjut Isi Data Pemohon
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            <button wire:click="nextStep" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-center text-sm font-bold text-white shadow-xl shadow-blue-500/30 hover:bg-blue-700 hover:shadow-2xl transition-all">
+                                <span>Lanjut Isi Data Pemohon</span>
+                                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                             </button>
                         </div>
                         @endif

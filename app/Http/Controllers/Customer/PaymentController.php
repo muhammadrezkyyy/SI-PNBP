@@ -37,9 +37,8 @@ class PaymentController extends Controller
         // Store receipt image privately on the local disk
         $receiptPath = $request->file('receipt_image')->store('receipts', 'local');
 
-        // Update payment record with NTPN and receipt
+        // Update payment record with receipt
         $reservation->payment->update([
-            'ntpn'         => $request->validated('ntpn'),
             'receipt_path' => $receiptPath,
         ]);
 

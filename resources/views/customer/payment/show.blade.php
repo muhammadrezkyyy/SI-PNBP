@@ -154,8 +154,8 @@
                             'Pilih menu *Pajak / PNBP / MPN G3*',
                             'Masukkan Kode Billing 15 digit di atas',
                             'Konfirmasi nominal dan selesaikan transaksi',
-                            'Catat *NTPN (16 digit)* dari bukti pembayaran',
-                            'Upload NTPN dan foto bukti di form bawah',
+                            'Simpan atau foto bukti pembayaran Anda',
+                            'Upload foto bukti pembayaran di form bawah',
                         ] as $i => $step)
                         <div class="flex items-start gap-3 group">
                             <div class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors">
@@ -179,7 +179,7 @@
                         </svg>
                         Lapor Pembayaran
                     </h2>
-                    <p class="text-xs text-slate-400 mt-1">Isi NTPN dan upload bukti pembayaran Anda.</p>
+                    <p class="text-xs text-slate-400 mt-1">Upload bukti pembayaran Anda.</p>
                 </div>
 
                 <form method="POST"
@@ -199,25 +199,6 @@
                         </ul>
                     </div>
                     @endif
-
-                    {{-- Input NTPN --}}
-                    <div>
-                        <label for="ntpn" class="block text-sm font-semibold text-slate-200 mb-2">
-                            NTPN (16 digit) <span class="text-red-400">*</span>
-                        </label>
-                        <input type="text"
-                               id="ntpn"
-                               name="ntpn"
-                               value="{{ old('ntpn') }}"
-                               maxlength="16"
-                               placeholder="Masukkan 16 digit NTPN"
-                               inputmode="numeric"
-                               class="w-full rounded-xl border border-slate-600 bg-slate-900/80 px-4 py-3.5 text-lg font-mono font-bold text-white tracking-[0.2em] placeholder:text-sm placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all @error('ntpn') border-red-500/50 bg-red-500/5 @enderror">
-                        @error('ntpn')
-                            <p class="mt-2 text-xs text-red-400">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2 text-xs text-slate-500">NTPN tertera pada struk/konfirmasi pembayaran Anda.</p>
-                    </div>
 
                     {{-- Upload Bukti Pembayaran --}}
                     <div x-data="{ fileName: '', preview: null }">
@@ -260,14 +241,6 @@
                         @error('receipt_image')
                             <p class="mt-2 text-xs text-red-400">{{ $message }}</p>
                         @enderror
-                    </div>
-
-                    {{-- Peringatan --}}
-                    <div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 flex items-start gap-3">
-                        <svg class="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-                        </svg>
-                        <p class="text-xs text-amber-300/80 leading-relaxed">Pastikan NTPN yang Anda masukkan sesuai dengan yang tertera di bukti pembayaran. Data yang salah dapat memperlambat proses verifikasi.</p>
                     </div>
 
                     {{-- Tombol Submit --}}

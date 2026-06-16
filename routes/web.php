@@ -99,4 +99,16 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         }
         return response()->file($path);
     })->name('receipt.view');
+
+    // Endpoint untuk melihat PDF asli SIMPONI
+    Route::get('/simponi/{payment}', function (\App\Models\Payment $payment) {
+        if (! $payment->simponi_pdf_path) {
+            abort(404, "Payment has no simponi_pdf_path");
+        }
+        $path = storage_path('app/private/' . $payment->simponi_pdf_path);
+        if (! file_exists($path)) {
+            abort(404, "File does not exist: " . $path);
+        }
+        return response()->file($path);
+    })->name('simponi.view');
 });

@@ -72,6 +72,11 @@ class BillingUpload extends Component
             if ($parsed['status'] === 'success') {
                 $this->extracted_billing_code = $parsed['billing_code'];
                 $this->extracted_nominal = $parsed['nominal'];
+                
+                // Auto-fill manual inputs and enable edit mode
+                $this->manual_billing_code = $parsed['billing_code'];
+                $this->manual_nominal = $parsed['nominal'];
+                $this->is_manual = true;
             } else {
                 $this->extracted_error = implode(' ', $parsed['errors']);
                 $this->is_manual = true; // Auto open manual mode on error
