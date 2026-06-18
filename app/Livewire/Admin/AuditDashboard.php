@@ -2,10 +2,8 @@
 
 namespace App\Livewire\Admin;
 
-use App\Http\Requests\SubmitAuditRequest;
 use App\Models\AuditLog;
 use App\Models\Payment;
-use App\Models\Reservation;
 use App\Services\FonnteNotificationService;
 use App\Services\ReservationService;
 use Livewire\Attributes\Title;
@@ -21,9 +19,15 @@ class AuditDashboard extends Component
     public bool    $zoom_open             = false;
     public ?Payment $payment              = null;
 
+    /** Full edited HTML content from the Word-like editor */
+    public string  $bpn_html             = '';
+
+    /** Positions of draggable elements (QR, logo) in px relative to paper */
+    public array   $element_positions    = [];
+
     public function mount(Payment $payment): void
     {
-        $this->payment    = $payment->load(['reservation.user', 'reservation.building']);
+        $this->payment = $payment->load(['reservation.user', 'reservation.building']);
 
         // Parse full SIMPONI data from the PDF file if it exists
         if ($this->payment->simponi_pdf_path) {
@@ -31,12 +35,12 @@ class AuditDashboard extends Component
             if ($disk->exists($this->payment->simponi_pdf_path)) {
                 try {
                     $parser = new \Smalot\PdfParser\Parser();
-                    $pdf = $parser->parseFile($disk->path($this->payment->simponi_pdf_path));
+                    $pdf    = $parser->parseFile($disk->path($this->payment->simponi_pdf_path));
                     $rawText = $pdf->getText();
-                    
+
                     $simponiParser = app(\App\Services\SimponiParserService::class);
                     $parsed = $simponiParser->parsePdf($rawText);
-                    
+
                     if (isset($parsed['full_data'])) {
                         $this->simponi_data = $parsed['full_data'];
                     }
@@ -45,8 +49,7 @@ class AuditDashboard extends Component
                 }
             }
         }
-        
-        // Ensure defaults for form binding if parsing failed or fields are missing
+
         $defaults = [
             'header_1' => 'Kementerian Keuangan RI',
             'header_2' => 'Direktorat Jenderal Anggaran',
@@ -58,79 +61,107 @@ class AuditDashboard extends Component
             'nama_wajib_setor' => '', 'kementerian_lembaga' => '', 'unit_eselon_i' => '',
             'satuan_kerja' => '', 'total_disetor' => '', 'terbilang' => '',
             'status' => 'Sudah Dibayar', 'ntb' => '', 'ntpn' => '',
-            'jenis_setoran' => '', 'kode_akun' => '', 'jumlah_setoran' => '', 'keterangan' => ''
+            'jenis_setoran' => '', 'kode_akun' => '', 'jumlah_setoran' => '', 'keterangan' => '',
         ];
         $this->simponi_data = array_merge($defaults, $this->simponi_data);
+
+        // Default draggable element positions (matching original CSS layout)
+        $this->element_positions = [
+            'bpn-el-logo'         => ['top' => 0,   'left' => 0,    'useRight'  => false, 'useCenter' => false],
+            'bpn-el-qr-header'    => ['top' => 0,   'left' => 609,  'useRight'  => true,  'useCenter' => false],
+            'bpn-el-qr-watermark' => ['top' => 210, 'left' => 147,  'useRight'  => false, 'useCenter' => false],
+        ];
+    }
+
+    /**
+     * Save the full edited HTML from the Word-like editor.
+     * #[Renderless] agar auto-save tidak trigger re-render komponen.
+     */
+    #[\Livewire\Attributes\Renderless]
+    public function saveBpnContent(string $html): void
+    {
+        $this->bpn_html = $html;
+    }
+
+    /**
+     * Save the absolute pixel position of a draggable element.
+     * #[Renderless] = simpan data tapi TIDAK trigger re-render komponen,
+     * sehingga posisi drag yang sudah diset via JS tidak di-reset.
+     */
+    #[\Livewire\Attributes\Renderless]
+    public function saveElementPosition(string $elId, int $top, int $left): void
+    {
+        $this->element_positions[$elId] = array_merge(
+            $this->element_positions[$elId] ?? [],
+            ['top' => $top, 'left' => $left, 'useRight' => false, 'useCenter' => false]
+        );
     }
 
     public function submitAudit(
-        ReservationService       $reservationService,
+        ReservationService        $reservationService,
         FonnteNotificationService $fonnte
     ): void {
         $this->validate([
-            'audit_decision'                        => ['required', 'in:APPROVE,REJECT'],
-            'rejection_reason'                      => ['required_if:audit_decision,REJECT', 'nullable', 'string', 'max:500'],
-            'simponi_data.kode_billing'             => ['required', 'digits:15'],
-            'simponi_data.total_disetor'            => ['required', 'string'],
-            'simponi_data.ntb'                      => ['required_if:audit_decision,APPROVE', 'nullable', 'string', 'max:50'],
-            'simponi_data.ntpn'                     => [
+            'audit_decision'                         => ['required', 'in:APPROVE,REJECT'],
+            'rejection_reason'                       => ['required_if:audit_decision,REJECT', 'nullable', 'string', 'max:500'],
+            'simponi_data.kode_billing'              => ['required', 'digits:15'],
+            'simponi_data.total_disetor'             => ['required', 'string'],
+            'simponi_data.ntb'                       => ['required_if:audit_decision,APPROVE', 'nullable', 'string', 'max:50'],
+            'simponi_data.ntpn'                      => [
                 'required_if:audit_decision,APPROVE',
-                'nullable',
-                'string',
-                'max:50',
+                'nullable', 'string', 'max:50',
                 \Illuminate\Validation\Rule::unique('payments', 'ntpn')->ignore($this->payment->id),
             ],
-            'simponi_data.tanggal_bayar'            => ['required_if:audit_decision,APPROVE', 'nullable', 'string'],
+            'simponi_data.tanggal_bayar'             => ['required_if:audit_decision,APPROVE', 'nullable', 'string'],
         ], [
-            'simponi_data.kode_billing.required'    => 'Kode billing wajib diisi.',
-            'simponi_data.kode_billing.digits'      => 'Kode billing harus tepat 15 digit.',
-            'simponi_data.total_disetor.required'   => 'Nominal wajib diisi.',
-            'audit_decision.required'               => 'Keputusan wajib dipilih.',
-            'rejection_reason.required_if'          => 'Alasan penolakan wajib diisi.',
-            'simponi_data.ntb.required_if'          => 'NTB wajib diisi jika disetujui.',
-            'simponi_data.ntpn.required_if'         => 'NTPN wajib diisi jika disetujui.',
-            'simponi_data.ntpn.unique'              => 'NTPN ini sudah digunakan pada pembayaran lain.',
-            'simponi_data.tanggal_bayar.required_if'=> 'Tanggal bayar wajib diisi jika disetujui.',
+            'simponi_data.kode_billing.required'     => 'Kode billing wajib diisi.',
+            'simponi_data.kode_billing.digits'       => 'Kode billing harus tepat 15 digit.',
+            'simponi_data.total_disetor.required'    => 'Nominal wajib diisi.',
+            'audit_decision.required'                => 'Keputusan wajib dipilih.',
+            'rejection_reason.required_if'           => 'Alasan penolakan wajib diisi.',
+            'simponi_data.ntb.required_if'           => 'NTB wajib diisi jika disetujui.',
+            'simponi_data.ntpn.required_if'          => 'NTPN wajib diisi jika disetujui.',
+            'simponi_data.ntpn.unique'               => 'NTPN ini sudah digunakan pada pembayaran lain.',
+            'simponi_data.tanggal_bayar.required_if' => 'Tanggal bayar wajib diisi jika disetujui.',
         ]);
 
         $reservation = $this->payment->reservation;
 
-        // Record audit log
         AuditLog::create([
             'admin_id'   => auth()->id(),
             'payment_id' => $this->payment->id,
             'action'     => $this->audit_decision,
             'payload'    => [
-                'kode_billing'          => $this->simponi_data['kode_billing'],
-                'rejection_reason'      => $this->rejection_reason ?: null,
-                'ntb'                   => $this->audit_decision === 'APPROVE' ? $this->simponi_data['ntb'] : null,
-                'ntpn'                  => $this->audit_decision === 'APPROVE' ? $this->simponi_data['ntpn'] : null,
-                'tanggal_bayar'         => $this->audit_decision === 'APPROVE' ? $this->simponi_data['tanggal_bayar'] : null,
-                'simponi_data_full'     => $this->simponi_data,
-                'audited_at'            => now()->toIso8601String(),
-                'auditor_ip'            => request()->ip(),
+                'kode_billing'      => $this->simponi_data['kode_billing'],
+                'rejection_reason'  => $this->rejection_reason ?: null,
+                'ntb'               => $this->audit_decision === 'APPROVE' ? $this->simponi_data['ntb'] : null,
+                'ntpn'              => $this->audit_decision === 'APPROVE' ? $this->simponi_data['ntpn'] : null,
+                'tanggal_bayar'     => $this->audit_decision === 'APPROVE' ? $this->simponi_data['tanggal_bayar'] : null,
+                'simponi_data_full' => $this->simponi_data,
+                'audited_at'        => now()->toIso8601String(),
+                'auditor_ip'        => request()->ip(),
             ],
         ]);
 
-        // Transition FSM
         $phoneNumber = $reservation->user->phone_number
             ?? ($reservation->customer_data['whatsapp'] ?? null)
             ?? ($reservation->customer_data['phone'] ?? null)
             ?? ($reservation->customer_data['no_telp'] ?? null);
 
         if ($this->audit_decision === 'APPROVE') {
-            // Update payment with NTB and verified NTPN
             $this->payment->update([
-                'ntb' => $this->simponi_data['ntb'],
+                'ntb'  => $this->simponi_data['ntb'],
                 'ntpn' => $this->simponi_data['ntpn'],
             ]);
-            
+
             $reservationService->confirm($reservation);
-            
-            // Generate New PDF
+
             $pdfGenerator = app(\App\Services\PdfGeneratorService::class);
-            $newPdfPath = $pdfGenerator->generateSimponiPdf($this->simponi_data);
-            
+            $pdfData = array_merge($this->simponi_data, [
+                'qr_content' => 'SIMPONI-BILLING-' . ($this->simponi_data['kode_billing'] ?? time()),
+            ]);
+            $newPdfPath = $pdfGenerator->generateSimponiPdf($pdfData);
+
             if ($newPdfPath) {
                 $this->payment->update(['simponi_pdf_path' => $newPdfPath]);
             }
@@ -149,15 +180,37 @@ class AuditDashboard extends Component
         $this->dispatch('audit-submitted', decision: $this->audit_decision);
     }
 
-    public function reprintPdf(\App\Services\PdfGeneratorService $pdfGenerator)
+    public function reprintPdf(\App\Services\PdfGeneratorService $pdfGenerator): void
     {
-        if ($this->payment && $this->payment->audit_status === 'APPROVED') {
-            $newPdfPath = $pdfGenerator->generateSimponiPdf($this->simponi_data);
-            if ($newPdfPath) {
-                $this->payment->update(['simponi_pdf_path' => $newPdfPath]);
-                $this->dispatch('simponi-pdf-updated');
-                session()->flash('message', 'PDF berhasil diperbarui dan dicetak ulang.');
+        if (!$this->payment) return;
+
+        // Jika admin sudah klik "Simpan Editan", $bpn_html berisi full #bpn-paper HTML snapshot
+        // → generate PDF 1:1 persis seperti tampilan editor
+        // Jika belum pernah klik "Simpan", fallback ke Blade template
+        if (!empty($this->bpn_html)) {
+            $newPdfPath = $pdfGenerator->generateFromEditedHtml(
+                $this->bpn_html,
+                $this->simponi_data,
+                $this->element_positions
+            );
+        } else {
+            $data = array_merge($this->simponi_data, [
+                'qr_content' => 'SIMPONI-BILLING-' . ($this->simponi_data['kode_billing'] ?? time()),
+                'ntb'        => $this->simponi_data['ntb']  ?? $this->payment->ntb  ?? '',
+                'ntpn'       => $this->simponi_data['ntpn'] ?? $this->payment->ntpn ?? '',
+            ]);
+            $newPdfPath = $pdfGenerator->generateSimponiPdf($data);
+        }
+
+        if ($newPdfPath) {
+            // Hapus file lama agar tidak menumpuk
+            if ($this->payment->simponi_pdf_path) {
+                \Illuminate\Support\Facades\Storage::disk('local')
+                    ->delete($this->payment->simponi_pdf_path);
             }
+            $this->payment->update(['simponi_pdf_path' => $newPdfPath]);
+            $this->dispatch('simponi-pdf-updated');
+            $this->dispatch('notify', message: 'PDF berhasil diperbarui. Klik "Buka PDF" untuk mencetak.');
         }
     }
 

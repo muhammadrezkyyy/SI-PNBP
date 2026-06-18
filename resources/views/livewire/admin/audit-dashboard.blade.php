@@ -119,7 +119,7 @@
                         <a href="{{ route('admin.simponi.view', $payment->id) }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Buka Tab Baru</a>
                     </div>
                     <div class="p-0 bg-slate-100 dark:bg-slate-900 flex-1" wire:ignore>
-                        <iframe src="{{ route('admin.simponi.view', $payment->id) }}#toolbar=0" class="w-full h-[600px] border-0"></iframe>
+                        <iframe src="{{ route('admin.simponi.stream', $payment->id) }}#toolbar=0" class="w-full h-[600px] border-0"></iframe>
                     </div>
                 </div>
                 @endif
@@ -127,142 +127,241 @@
 
         {{-- RIGHT: Editable Data & Verifikasi --}}
         <div class="xl:col-span-7 space-y-6 flex flex-col">
-            {{-- SIMPONI Editable Data --}}
+            {{-- SIMPONI Word-like Document Editor --}}
             @if($payment?->simponi_pdf_path)
-        <div class="flex-1 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-slate-800 shadow-sm overflow-hidden flex flex-col">
-            <div class="border-b border-blue-100 dark:border-slate-700/50 bg-blue-50 dark:bg-slate-800 px-5 py-4 flex items-center justify-between">
-                <div>
-                    <h3 class="font-semibold text-blue-800 dark:text-slate-100">Tagihan SIMPONI (Editable)</h3>
-                    <p class="text-xs text-blue-600 dark:text-slate-400 mt-0.5">Data ini diekstrak dari PDF. Semua perubahan di sini akan dicetak ke PDF akhir.</p>
-                </div>
-            </div>
-            <div class="flex-1 overflow-auto p-4 sm:p-8 relative bg-slate-100 dark:bg-slate-900/50">
-                {{-- Toolbar MS Word Style --}}
-                <div class="max-w-[794px] mx-auto bg-white border border-slate-300 shadow-sm mb-4 rounded flex items-center p-2 gap-1 sticky top-0 z-50">
-                    <button type="button" onclick="document.execCommand('bold', false, null)" class="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded font-bold text-black border border-transparent hover:border-slate-300" title="Bold (Ctrl+B)">B</button>
-                    <button type="button" onclick="document.execCommand('italic', false, null)" class="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded italic text-black border border-transparent hover:border-slate-300" title="Italic (Ctrl+I)">I</button>
-                    <button type="button" onclick="document.execCommand('underline', false, null)" class="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded underline text-black border border-transparent hover:border-slate-300" title="Underline (Ctrl+U)">U</button>
-                    <div class="w-px h-6 bg-slate-300 mx-1"></div>
-                    <button type="button" onclick="document.execCommand('justifyLeft', false, null)" class="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded text-black border border-transparent hover:border-slate-300" title="Align Left">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16" /></svg>
-                    </button>
-                    <button type="button" onclick="document.execCommand('justifyCenter', false, null)" class="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded text-black border border-transparent hover:border-slate-300" title="Align Center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16" /></svg>
-                    </button>
-                    <button type="button" onclick="document.execCommand('justifyRight', false, null)" class="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded text-black border border-transparent hover:border-slate-300" title="Align Right">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16" /></svg>
-                    </button>
-                    <div class="w-px h-6 bg-slate-300 mx-1"></div>
-                    <button type="button" onclick="document.execCommand('insertUnorderedList', false, null)" class="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded text-black border border-transparent hover:border-slate-300" title="Bullet List">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                    </button>
-                    <div class="ml-auto text-xs text-slate-500 italic px-2">Blok teks di bawah lalu klik tombol untuk mengedit</div>
-                </div>
+            <div class="flex-1 rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-slate-800 shadow-sm overflow-hidden flex flex-col"
+                 x-data="bpnWordEditor($wire)"
+                 x-init="init()">
 
-                {{-- KERTAS BPN WYSIWYG --}}
-                <div class="bg-white text-black p-6 sm:p-8 shadow-sm relative group border border-slate-200 mx-auto" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; width: 794px; min-height: 1123px; display: flex; flex-direction: column;">
-                    <style>
-                        .bpn-paper .label {
-                            width: 230px;
-                            padding-left: 0;
-                            vertical-align: top;
-                            padding-bottom: 3px;
-                        }
-                        .bpn-paper .colon {
-                            width: 15px;
-                            text-align: center;
-                            vertical-align: top;
-                            padding-bottom: 3px;
-                        }
-                        .bpn-paper .value {
-                            vertical-align: top;
-                            padding-bottom: 3px;
-                        }
-                        .bpn-editable {
-                            outline: none;
-                            border: 1px solid transparent;
-                            display: block;
-                            min-height: 1.2em;
-                            cursor: text;
-                        }
-                        .bpn-editable:hover, .bpn-editable:focus {
-                            background-color: #f8fafc;
-                            border: 1px dashed #cbd5e1;
-                        }
-                    </style>
-                    <div class="bpn-paper text-[12px] leading-[1.4] relative z-10 flex-1 flex flex-col">
-                        {{-- Background Watermark --}}
-                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-[-1] overflow-hidden pt-32" style="opacity: 0.04;">
-                            <div class="w-[650px] h-[650px]">
-                                {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(650)->margin(0)->generate($simponi_data['ntpn'] ?? 'SIMPONI') !!}
-                            </div>
-                        </div>
-
-                        {{-- Header --}}
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="flex items-start gap-4">
-                                <img src="/images/kemenkeu_logo.png?v={{ time() }}" class="w-[110px] object-contain" alt="Logo">
-                                <div class="flex-1 text-left pt-2 min-w-[300px]">
-                                    <div contenteditable="true" class="bpn-editable font-bold text-[12px]" x-data @blur="$wire.set('simponi_data.header_1', $el.innerHTML)">{!! $simponi_data['header_1'] ?? '' !!}</div>
-                                    <div contenteditable="true" class="bpn-editable font-bold text-[12px]" x-data @blur="$wire.set('simponi_data.header_2', $el.innerHTML)">{!! $simponi_data['header_2'] ?? '' !!}</div>
-                                    <div contenteditable="true" class="bpn-editable font-bold text-[12px]" x-data @blur="$wire.set('simponi_data.header_3', $el.innerHTML)">{!! $simponi_data['header_3'] ?? '' !!}</div>
-                                </div>
-                            </div>
-                            <div class="w-[110px] h-[110px] flex justify-end">
-                                {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(95)->margin(0)->generate($simponi_data['ntpn'] ?? 'SIMPONI') !!}
-                            </div>
-                        </div>
-
-                        {{-- Title --}}
-                        <div class="text-center mb-6">
-                            <div contenteditable="true" class="bpn-editable font-bold text-[14px] inline-block" x-data @blur="$wire.set('simponi_data.title_1', $el.innerHTML)">{!! $simponi_data['title_1'] ?? '' !!}</div><br>
-                            <div contenteditable="true" class="bpn-editable font-bold text-[14px] inline-block" x-data @blur="$wire.set('simponi_data.title_2', $el.innerHTML)">{!! $simponi_data['title_2'] ?? '' !!}</div>
-                        </div>
-
-                        {{-- Table --}}
-                        <div class="mb-2">Data Pembayaran Tagihan :</div>
-                        <table class="w-full mb-8">
-                            <tbody>
-                                <tr><td class="label">Kode Billing</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.kode_billing', $el.innerHTML)">{!! $simponi_data['kode_billing'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Tanggal Billing</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.tanggal_billing', $el.innerHTML)">{!! $simponi_data['tanggal_billing'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Tanggal Kedaluwarsa</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.tanggal_kedaluwarsa', $el.innerHTML)">{!! $simponi_data['tanggal_kedaluwarsa'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Tanggal Bayar</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.tanggal_bayar', $el.innerHTML)">{!! $simponi_data['tanggal_bayar'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label italic">Bank/Pos/Fintech Bayar</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable font-bold" x-data @blur="$wire.set('simponi_data.bank_bayar', $el.innerHTML)">{!! $simponi_data['bank_bayar'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label italic">Channel Bayar</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable font-bold italic" x-data @blur="$wire.set('simponi_data.channel_bayar', $el.innerHTML)">{!! $simponi_data['channel_bayar'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Nama Wajib Setor/Wajib Bayar</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.nama_wajib_setor', $el.innerHTML)">{!! $simponi_data['nama_wajib_setor'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Kementerian/Lembaga</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable font-bold" x-data @blur="$wire.set('simponi_data.kementerian_lembaga', $el.innerHTML)">{!! $simponi_data['kementerian_lembaga'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Unit Eselon I</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable font-bold" x-data @blur="$wire.set('simponi_data.unit_eselon_i', $el.innerHTML)">{!! $simponi_data['unit_eselon_i'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Satuan Kerja</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.satuan_kerja', $el.innerHTML)">{!! $simponi_data['satuan_kerja'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Total Disetor</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.total_disetor', $el.innerHTML)">{!! $simponi_data['total_disetor'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Terbilang</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable italic" x-data @blur="$wire.set('simponi_data.terbilang', $el.innerHTML)">{!! $simponi_data['terbilang'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Status</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.status', $el.innerHTML)">{!! $simponi_data['status'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label font-bold">NTB</td><td class="colon font-bold">:</td><td class="value"><div contenteditable="true" class="bpn-editable font-bold" x-data @blur="$wire.set('simponi_data.ntb', $el.innerHTML)">{!! $simponi_data['ntb'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label font-bold">NTPN</td><td class="colon font-bold">:</td><td class="value"><div contenteditable="true" class="bpn-editable font-bold" x-data @blur="$wire.set('simponi_data.ntpn', $el.innerHTML)">{!! $simponi_data['ntpn'] ?? '' !!}</div></td></tr>
-                            </tbody>
-                        </table>
-
-                        <div class="mb-2">Detail Pembayaran Tagihan :</div>
-                        <table class="w-full">
-                            <tbody>
-                                <tr><td class="label">Jenis Setoran</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.jenis_setoran', $el.innerHTML)">{!! $simponi_data['jenis_setoran'] ?? '' !!}</div></td></tr>
-                                <tr><td colspan="3" class="h-4"></td></tr>
-                                <tr><td class="label">Kode Akun</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.kode_akun', $el.innerHTML)">{!! $simponi_data['kode_akun'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Jumlah Setoran</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.jumlah_setoran', $el.innerHTML)">{!! $simponi_data['jumlah_setoran'] ?? '' !!}</div></td></tr>
-                                <tr><td class="label">Keterangan</td><td class="colon">:</td><td class="value"><div contenteditable="true" class="bpn-editable" x-data @blur="$wire.set('simponi_data.keterangan', $el.innerHTML)">{!! $simponi_data['keterangan'] ?? '' !!}</div></td></tr>
-                            </tbody>
-                        </table>
-
-                        {{-- Footer --}}
-                        <div class="mt-auto text-[10px] font-bold italic text-black flex items-center justify-between pt-2" style="font-family: Arial, sans-serif; border-top: 1px solid #000;">
-                            <span>Tanggal Cetak : {{ \Carbon\Carbon::now()->format('d/m/Y H:i:s') }} WIB</span>
-                            <span>1/1</span>
-                            <span>SIMPONI</span>
-                        </div>
+                {{-- Header Panel --}}
+                <div class="border-b border-blue-100 dark:border-slate-700/50 bg-blue-50 dark:bg-slate-800 px-5 py-3 flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="font-semibold text-blue-800 dark:text-slate-100 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            Editor Dokumen SIMPONI
+                        </h3>
+                        <p class="text-xs text-blue-600 dark:text-slate-400 mt-0.5">Edit bebas seperti Microsoft Word — klik teks untuk mengedit, geser elemen via handle ⠿</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span x-show="!saved" class="text-xs text-amber-600 flex items-center gap-1 animate-pulse">
+                            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 70"/></svg> Menyimpan…
+                        </span>
+                        <span x-show="saved" class="text-xs text-emerald-600 flex items-center gap-1">
+                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Tersimpan
+                        </span>
                     </div>
                 </div>
-            </div>
-        </div>
-        @endif
+
+                {{-- MS Word Ribbon Toolbar --}}
+                <div class="bg-white dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 px-2 py-1.5 flex flex-wrap items-center gap-1 sticky top-0 z-50 shadow-sm">
+                    <select onchange="document.getElementById('bpn-editor').focus(); document.execCommand('fontName', false, this.value);"
+                            class="h-7 text-xs border border-slate-300 rounded px-1 text-slate-700 bg-white focus:outline-none" title="Font Keluarga">
+                        <option value="Arial, Helvetica, sans-serif" selected>Arial</option>
+                        <option value="Times New Roman, serif">Times New Roman</option>
+                        <option value="Courier New, monospace">Courier New</option>
+                        <option value="Georgia, serif">Georgia</option>
+                        <option value="Verdana, sans-serif">Verdana</option>
+                        <option value="Tahoma, sans-serif">Tahoma</option>
+                    </select>
+                    <select @change="setFontSize($event.target.value)"
+                            class="h-7 w-14 text-xs border border-slate-300 rounded px-1 text-slate-700 bg-white focus:outline-none" title="Ukuran">
+                        <option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
+                        <option value="13" selected>13</option><option value="14">14</option><option value="16">16</option><option value="18">18</option>
+                        <option value="20">20</option><option value="24">24</option><option value="28">28</option><option value="36">36</option>
+                    </select>
+                    <span class="w-px h-5 bg-slate-300 mx-0.5"></span>
+                    <button type="button" @click="execCmd('bold')" :class="{'bg-blue-100': isBold}" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 font-bold text-sm text-slate-800" title="Bold">B</button>
+                    <button type="button" @click="execCmd('italic')" :class="{'bg-blue-100': isItalic}" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 italic text-sm text-slate-800" title="Italic">I</button>
+                    <button type="button" @click="execCmd('underline')" :class="{'bg-blue-100': isUnderline}" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 underline text-sm text-slate-800" title="Underline">U</button>
+                    <button type="button" @click="execCmd('strikeThrough')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 line-through text-sm text-slate-700" title="Strikethrough">S</button>
+                    <span class="w-px h-5 bg-slate-300 mx-0.5"></span>
+                    <label title="Warna Teks" class="w-7 h-7 flex items-center justify-center rounded border border-slate-300 hover:bg-slate-100 cursor-pointer relative overflow-hidden">
+                        <svg class="h-3.5 w-3.5 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 01.894.553l7 14A1 1 0 0117 18H3a1 1 0 01-.894-1.447l7-14A1 1 0 0110 2z"/></svg>
+                        <input type="color" class="absolute opacity-0 inset-0 w-full h-full cursor-pointer" @change="execCmd('foreColor', $event.target.value)" value="#000000">
+                    </label>
+                    <label title="Highlight" class="w-7 h-7 flex items-center justify-center rounded border border-slate-300 hover:bg-slate-100 cursor-pointer relative overflow-hidden bg-yellow-50">
+                        <span class="text-xs font-bold text-yellow-600">A</span>
+                        <input type="color" class="absolute opacity-0 inset-0 w-full h-full cursor-pointer" @change="execCmd('hiliteColor', $event.target.value)" value="#ffff00">
+                    </label>
+                    <button type="button" @click="execCmd('removeFormat')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 hover:text-red-500 text-slate-500 text-xs" title="Hapus Format">✕</button>
+                    <span class="w-px h-5 bg-slate-300 mx-0.5"></span>
+                    <button type="button" @click="execCmd('justifyLeft')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 text-slate-700" title="Kiri">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"/></svg></button>
+                    <button type="button" @click="execCmd('justifyCenter')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 text-slate-700" title="Tengah">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"/></svg></button>
+                    <button type="button" @click="execCmd('justifyRight')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 text-slate-700" title="Kanan">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"/></svg></button>
+                    <button type="button" @click="execCmd('justifyFull')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 text-slate-700" title="Justify">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+                    <span class="w-px h-5 bg-slate-300 mx-0.5"></span>
+                    <button type="button" @click="execCmd('insertUnorderedList')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 text-slate-700 text-sm" title="Bullet">•≡</button>
+                    <button type="button" @click="execCmd('insertOrderedList')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 text-slate-700 text-xs" title="Nomor">1≡</button>
+                    <button type="button" @click="execCmd('indent')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 text-slate-700 text-xs" title="Indent">→|</button>
+                    <button type="button" @click="execCmd('outdent')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 text-slate-700 text-xs" title="Outdent">|←</button>
+                    <span class="w-px h-5 bg-slate-300 mx-0.5"></span>
+                    <button type="button" @click="execCmd('undo')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 text-slate-700" title="Undo (Ctrl+Z)">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button>
+                    <button type="button" @click="execCmd('redo')" class="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-100 text-slate-700" title="Redo (Ctrl+Y)">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6"/></svg></button>
+                    <span class="ml-auto text-xs text-slate-400 italic hidden lg:flex items-center gap-1">⠿ = geser drag &nbsp;|&nbsp; Ctrl+Z undo</span>
+                </div>
+
+                {{-- Document Canvas --}}
+                <div class="flex-1 overflow-auto bg-slate-300 dark:bg-slate-900 p-8">
+
+                    {{-- CSS for drag handles --}}
+                    <style>
+                        .bpn-abs-el { cursor: default; }
+                        .bpn-drag-handle {
+                            position: absolute;
+                            top: -18px; left: 0;
+                            background: #2563eb;
+                            color: #fff;
+                            font-size: 10px;
+                            padding: 1px 5px;
+                            border-radius: 3px;
+                            cursor: grab;
+                            white-space: nowrap;
+                            opacity: 0;
+                            transition: opacity .15s;
+                            user-select: none;
+                            z-index: 100;
+                        }
+                        /* Handle logo & QR header: tampil saat parent hover */
+                        .bpn-abs-el:hover .bpn-drag-handle { opacity: 1; }
+                        /* Handle watermark: parent pointer-events:none sehingga :hover parent tidak jalan.
+                           Tampilkan handle selalu sedikit (0.35) dan penuh saat handle-nya sendiri di-hover */
+                        #bpn-el-qr-watermark .bpn-drag-handle {
+                            opacity: 0.35;
+                            background: #7c3aed;
+                        }
+                        #bpn-el-qr-watermark .bpn-drag-handle:hover { opacity: 1; }
+                        .bpn-drag-handle:active { cursor: grabbing; }
+                        #bpn-editor:focus { outline: none; }
+                        #bpn-editor a { color: #2563eb; }
+                    </style>
+
+                    {{-- A4 Paper --}}
+                    <div id="bpn-paper"
+                         class="bg-white shadow-2xl mx-auto"
+                         style="position:relative; width:794px; min-height:1123px; padding:40px 50px; box-sizing:border-box; font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.5; color:#000;">
+
+                        {{-- ════ DRAGGABLE: Logo ════
+                             wire:ignore = Livewire tidak reset posisi setelah drag --}}
+                        <div id="bpn-el-logo" class="bpn-abs-el" wire:ignore
+                             style="position:absolute; top:0px; left:0px; z-index:30; user-select:none;">
+                            <div class="bpn-drag-handle" @mousedown.prevent="startDrag($event)">⠿ Logo</div>
+                            <img src="/images/kemenkeu_logo.png?v={{ time() }}" style="width:80px; display:block; pointer-events:none;" draggable="false" alt="Logo">
+                        </div>
+
+                        {{-- ════ DRAGGABLE: Header QR Code ════ --}}
+                        <div id="bpn-el-qr-header" class="bpn-abs-el" wire:ignore
+                             style="position:absolute; top:0px; left:609px; z-index:30; user-select:none;">
+                            <div class="bpn-drag-handle" @mousedown.prevent="startDrag($event)">⠿ QR Header</div>
+                            {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(85)->margin(0)->generate($simponi_data['ntpn'] ?? 'SIMPONI') !!}
+                        </div>
+
+                        {{-- ════ DRAGGABLE: Watermark QR ════
+                             FIX: z-index:20 (di atas editor z-index:5) + pointer-events:none pada container
+                             agar klik menembus ke editor. Handle punya pointer-events:all sendiri. --}}
+                        <div id="bpn-el-qr-watermark" class="bpn-abs-el" wire:ignore
+                             style="position:absolute; top:210px; left:147px; width:500px; z-index:1; user-select:none; pointer-events:none;">
+                            {{-- Handle: pointer-events:all agar bisa di-klik, meski parent pointer-events:none
+                                 PENTING: tidak pakai opacity:0 inline — biarkan CSS atur ke 0.35 --}}
+                            <div class="bpn-drag-handle"
+                                 style="pointer-events:all;"
+                                 @mousedown.prevent="startDrag($event)">⠿ Geser Watermark</div>
+                            {{-- QR SVG dengan warna abu-abu terang (tanpa opacity CSS karena DOMPDF tidak support) --}}
+                            <div style="pointer-events:none;">
+                                {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(500)->margin(0)->color(240, 240, 240)->generate($simponi_data['ntpn'] ?? 'SIMPONI') !!}
+                            </div>
+                        </div>
+
+                        {{-- ════ MAIN EDITABLE CONTENT ════
+                             min-height dikurangi 60px untuk footer absolute di bawah --}}
+                        <div id="bpn-editor"
+                             contenteditable="true"
+                             spellcheck="false"
+                             wire:ignore
+                             style="position:relative; z-index:5; min-height:980px; outline:none; caret-color:#1d4ed8; padding-bottom:60px;"
+                             @input.debounce.600ms="onEdit()"
+                             @keydown.ctrl.z.prevent="execCmd('undo')"
+                             @keydown.ctrl.y.prevent="execCmd('redo')"
+                             @keydown.ctrl.b.prevent="execCmd('bold')"
+                             @keydown.ctrl.i.prevent="execCmd('italic')"
+                             @keydown.ctrl.u.prevent="execCmd('underline')"
+                             @paste.prevent="handlePaste($event)"
+                             @mouseup="updateToolbarState()"
+                             @keyup="updateToolbarState()">
+
+                            {{-- Header spacer untuk logo & QR (absolute) --}}
+                            <table style="width:100%; border-collapse:collapse; margin-bottom:20px; table-layout:fixed;">
+                                <tr>
+                                    <td style="width:90px; min-height:90px; vertical-align:top;">&nbsp;</td>
+                                    <td style="vertical-align:top; padding-top:10px; font-size:13px; line-height:1.6;">
+                                        {!! $simponi_data['header_1'] ?? 'Kementerian Keuangan RI' !!}<br>
+                                        {!! $simponi_data['header_2'] ?? 'Direktorat Jenderal Anggaran' !!}<br>
+                                        {!! $simponi_data['header_3'] ?? 'SISTEM INFORMASI PNBP ONLINE (SIMPONI)' !!}
+                                    </td>
+                                    <td style="width:95px;">&nbsp;</td>
+                                </tr>
+                            </table>
+
+                            {{-- Title --}}
+                            <div style="text-align:center; font-size:16px; font-weight:bold; margin:30px 0 40px 0; line-height:1.3;">
+                                {!! $simponi_data['title_1'] ?? 'BUKTI PENERIMAAN NEGARA' !!}<br>
+                                {!! $simponi_data['title_2'] ?? 'PENERIMAAN NEGARA BUKAN PAJAK (PNBP)' !!}
+                            </div>
+
+                            {{-- Data Pembayaran --}}
+                            <div style="font-size:13px; font-weight:normal; margin-bottom:10px;">Data Pembayaran Tagihan :</div>
+                            <table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
+                                <tbody>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Kode Billing</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['kode_billing'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Tanggal Billing</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['tanggal_billing'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Tanggal Kedaluwarsa</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['tanggal_kedaluwarsa'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Tanggal Bayar</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;font-weight:bold;">{!! $simponi_data['tanggal_bayar'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Bank/Pos/<i>Fintech</i> Bayar</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;font-weight:bold;">{!! $simponi_data['bank_pos_fintech_bayar'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;font-style:italic;"><i>Channel Bayar</i></td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;font-weight:bold;font-style:italic;">{!! $simponi_data['channel_bayar'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Nama Wajib Setor/Wajib Bayar</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['nama_wajib_setor'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Kementerian/Lembaga</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;font-weight:bold;">{!! $simponi_data['kementerian_lembaga'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Unit Eselon I</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;font-weight:bold;">{!! $simponi_data['unit_eselon_i'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Satuan Kerja</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['satuan_kerja'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Total Disetor</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['total_disetor'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Terbilang</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;font-style:italic;">{!! $simponi_data['terbilang'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Status</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['status'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;font-weight:bold;">NTB</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;font-weight:bold;">{!! $simponi_data['ntb'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;font-weight:bold;">NTPN</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;font-weight:bold;">{!! $simponi_data['ntpn'] ?? '' !!}</td></tr>
+                                </tbody>
+                            </table>
+
+                            {{-- Detail Pembayaran --}}
+                            <div style="font-size:13px; font-weight:normal; margin-bottom:10px;">Detail Pembayaran Tagihan :</div>
+                            <table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
+                                <tbody>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Jenis Setoran</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['jenis_setoran'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Kode Akun</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['kode_akun'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Jumlah Setoran</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['jumlah_setoran'] ?? '' !!}</td></tr>
+                                    <tr><td style="width:220px;padding:3px 0 3px 15px;vertical-align:top;">Keterangan</td><td style="width:15px;text-align:center;vertical-align:top;padding:3px 0;">:</td><td style="vertical-align:top;padding:3px 0;">{!! $simponi_data['keterangan'] ?? '' !!}</td></tr>
+                                </tbody>
+                            </table>
+
+                        </div>{{-- /#bpn-editor --}}
+
+                        {{-- ════ FOOTER: absolute di bawah kertas (di luar contenteditable) ════ --}}
+                        <div wire:ignore
+                             style="position:absolute; bottom:40px; left:50px; right:50px;
+                                    font-size:11px; color:#000; font-family:Arial,Helvetica,sans-serif;
+                                    border-top:2px solid #000; padding-top:8px; z-index:25;
+                                    display:flex; justify-content:space-between; align-items:center;">
+                            <div style="font-weight:bold; font-style:italic;">Tanggal Cetak : {{ \Carbon\Carbon::now()->format('d/m/Y H:i:s') }} WIB</div>
+                            <div style="font-weight:bold; font-style:italic;">1/1</div>
+                            <div style="font-weight:bold; font-style:italic;">SIMPONI</div>
+                        </div>
+                    </div>{{-- /#bpn-paper --}}
+                </div>{{-- /.canvas --}}
+            </div>{{-- /x-data bpnWordEditor --}}
+            @endif
         @if(!$submitted)
         {{-- Audit Form --}}
         <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden mt-6">
@@ -357,7 +456,7 @@
                     </span>
                     <span wire:loading wire:target="submitAudit">
                         <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                         </svg>
                     </span>
@@ -367,20 +466,100 @@
             </div>
         </div>
         @else
-        {{-- Tombol Cetak Ulang PDF jika sudah disetujui --}}
-        <div class="mt-6">
-            <button wire:click="reprintPdf" wire:loading.attr="disabled"
-                    class="w-full rounded-xl bg-blue-600 px-6 py-3.5 text-center text-sm font-bold text-white shadow-xl shadow-blue-500/30 hover:bg-blue-700 hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                <span wire:loading.remove wire:target="reprintPdf">Cetak Ulang & Perbarui PDF SIMPONI Asli</span>
-                <span wire:loading wire:target="reprintPdf">Memperbarui PDF...</span>
-            </button>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">Jika Anda melakukan perubahan teks di editor atas, klik tombol ini agar perubahan tersebut tersimpan dan tertimpa ke file PDF aslinya.</p>
+        {{-- ══════════════════════════════════════
+             PANEL SETELAH AUDIT SELESAI
+             ══════════════════════════════════════ --}}
+        <div class="mt-6 space-y-4"
+             x-data="{ pdfReady: false, pdfUrl: '' }"
+             @simponi-pdf-updated.window="pdfReady = true; pdfUrl = '{{ route('customer.payment.simponi', $payment) }}?' + Date.now()">
+
+            {{-- Status Audit --}}
+            <div class="rounded-xl px-5 py-4 flex items-center gap-4
+                        {{ $audit_decision === 'APPROVE'
+                            ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800'
+                            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' }}">
+                <div class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center
+                            {{ $audit_decision === 'APPROVE' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600' }}">
+                    @if($audit_decision === 'APPROVE')
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    @else
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    @endif
+                </div>
+                <div>
+                    <p class="font-bold text-sm {{ $audit_decision === 'APPROVE' ? 'text-emerald-800 dark:text-emerald-200' : 'text-red-800 dark:text-red-200' }}">
+                        Audit {{ $audit_decision === 'APPROVE' ? 'Disetujui ✓' : 'Ditolak ✗' }}
+                    </p>
+                    <p class="text-xs {{ $audit_decision === 'APPROVE' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }} mt-0.5">
+                        {{ $audit_decision === 'APPROVE' ? 'PDF BPN telah digenerate dan bisa dicetak.' : 'Reservasi telah ditolak.' }}
+                    </p>
+                </div>
+            </div>
+
+            @if($audit_decision === 'APPROVE')
+            {{-- STEP 1: Perbarui PDF dari Editan --}}
+            <div class="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4 space-y-3">
+                <p class="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
+                    Langkah 1 — Simpan Editan ke PDF
+                </p>
+                <button onclick="savePaperAndReprint()"
+                        wire:loading.attr="disabled"
+                        class="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/30
+                               hover:bg-blue-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed
+                               flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" wire:loading.remove wire:target="reprintPdf" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    <svg class="w-4 h-4 animate-spin" wire:loading wire:target="reprintPdf" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    <span wire:loading.remove wire:target="reprintPdf">⟳ Simpan Editan & Perbarui PDF</span>
+                    <span wire:loading wire:target="reprintPdf">Memperbarui PDF...</span>
+                </button>
+                <p class="text-xs text-blue-500 dark:text-blue-400 text-center">
+                    Klik tombol ini setiap kali selesai mengedit dokumen di atas
+                </p>
+            </div>
+
+            {{-- STEP 2: Buka & Cetak PDF --}}
+            <div class="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4 space-y-3">
+                <p class="text-xs font-semibold text-green-700 dark:text-green-300 uppercase tracking-wide">
+                    Langkah 2 — Buka & Cetak PDF
+                </p>
+                {{-- Link selalu ada untuk PDF awal, diperbarui saat reprintPdf berhasil --}}
+                <a :href="pdfUrl || '{{ route('customer.payment.simponi', $payment) }}'"
+                   target="_blank"
+                   style="background-color: #16a34a; color: white;"
+                   class="w-full rounded-xl bg-green-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-green-500/30
+                          hover:bg-green-700 hover:shadow-xl transition-all
+                          flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                    </svg>
+                    <span x-text="pdfReady ? '✓ Buka PDF Terbaru (Cetak)' : 'Buka PDF & Cetak'"></span>
+                </a>
+                <p class="text-xs text-green-600 dark:text-green-400 text-center">
+                    PDF terbuka di tab baru → tekan <kbd class="bg-green-100 dark:bg-green-800 px-1.5 rounded font-mono text-green-700 dark:text-green-300">Ctrl+P</kbd> untuk mencetak
+                </p>
+            </div>
+            @endif
+
+            {{-- Tombol Selesai / Kembali --}}
+            <a href="{{ route('admin.reservations.index') }}"
+               class="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700
+                      px-5 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200
+                      hover:bg-slate-50 dark:hover:bg-slate-600 transition-all
+                      flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Selesai &amp; Kembali ke Daftar Reservasi
+            </a>
         </div>
         @endif
 
     </div> {{-- /END Right Column --}}
-</div> {{-- /END Side-by-Side Grid Layout --}}
 
     {{-- Zoom Modal (Alpine.js) --}}
     @if($payment?->receipt_path)
@@ -409,3 +588,236 @@
     </div>
     @endif
 </div>
+
+<script>
+// ── Global: Simpan paper HTML dan generate PDF ───────────────────
+function savePaperAndReprint() {
+    const paper = document.getElementById('bpn-paper');
+    if (!paper) { alert('Editor tidak ditemukan. Pastikan halaman sudah dimuat sempurna.'); return; }
+
+    const clone = paper.cloneNode(true);
+
+    // 1. Hapus semua drag handle (label ⠿)
+    clone.querySelectorAll('.bpn-drag-handle').forEach(el => el.remove());
+
+    // 2. Hilangkan atribut interaktif
+    clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    clone.querySelectorAll('[spellcheck]').forEach(el => el.removeAttribute('spellcheck'));
+    clone.querySelectorAll('[draggable]').forEach(el => el.removeAttribute('draggable'));
+
+    // 3. Bersihkan inline style yang tidak perlu untuk PDF
+    clone.querySelectorAll('[style]').forEach(el => {
+        el.style.removeProperty('pointer-events');
+        el.style.removeProperty('user-select');
+        el.style.removeProperty('cursor');
+    });
+
+    // 4. FIX DOMPDF KEKURANGAN (box-sizing, flexbox, svg opacity)
+    // a) Fix padding & box-sizing: hapus padding paper, pindahkan ke editor agar tidak overflow 794px
+    clone.style.padding = '0';
+    clone.style.boxSizing = 'content-box';
+    const editorNode = clone.querySelector('#bpn-editor');
+    if (editorNode) {
+        // top:40px, right:50px, bottom:60px, left:50px
+        editorNode.style.padding = '40px 50px 60px 50px';
+    }
+
+    // b) Fix Footer flexbox: DOMPDF tidak support display:flex, ganti ke float
+    const footer = clone.querySelector('div[style*="display:flex"]');
+    if (footer) {
+        footer.style.display = 'block';
+        if (footer.children.length >= 3) {
+            const leftHtml = footer.children[0].innerHTML;
+            const centerHtml = footer.children[1].innerHTML;
+            const rightHtml = footer.children[2].innerHTML;
+            footer.innerHTML = `
+                <div style="float: left;">${leftHtml}</div>
+                <div style="float: right;">${rightHtml}</div>
+                <div style="text-align: center; margin: 0 auto; width: 100px;">${centerHtml}</div>
+                <div style="clear: both;"></div>
+            `;
+        }
+    }
+
+    const paperHtml = clone.outerHTML;
+
+    // 4. Kirim ke Livewire via component yang aktif
+    const livewireEl = document.getElementById('bpn-paper').closest('[wire\\:id]');
+    if (!livewireEl) { alert('Livewire component tidak ditemukan.'); return; }
+
+    const wireId = livewireEl.getAttribute('wire:id');
+    const component = Livewire.find(wireId);
+    if (!component) { alert('Tidak dapat menemukan Livewire component.'); return; }
+
+    component.call('saveBpnContent', paperHtml).then(() => {
+        setTimeout(() => component.call('reprintPdf'), 400);
+    });
+}
+
+document.addEventListener('alpine:init', () => {
+    Alpine.data('bpnWordEditor', ($wire) => ({
+        // ── State ──────────────────────────────────────────
+        saved: true,
+        isBold: false,
+        isItalic: false,
+        isUnderline: false,
+        dragging: null,
+        dragOffX: 0,
+        dragOffY: 0,
+        _onMove: null,
+        _onStop: null,
+        saveTimer: null,
+
+        // ── Init ───────────────────────────────────────────
+        init() {
+            this._onMove = this.onDrag.bind(this);
+            this._onStop = this.stopDrag.bind(this);
+        },
+
+        // ── Drag & Drop ────────────────────────────────────
+        startDrag(event) {
+            // Temukan .bpn-abs-el terdekat dari handle yang diklik
+            const el = event.target.closest('.bpn-abs-el');
+            if (!el) return;
+
+            this.dragging = el;
+            const paper  = document.getElementById('bpn-paper');
+            const pRect  = paper.getBoundingClientRect();
+            const eRect  = el.getBoundingClientRect();
+
+            // Hitung posisi sekarang relatif terhadap paper
+            let curLeft = eRect.left - pRect.left;
+            let curTop  = eRect.top  - pRect.top;
+
+            // Set absolute position (override right/center jika ada)
+            el.style.right      = 'auto';
+            el.style.marginLeft = '0';
+            el.style.left       = curLeft + 'px';
+            el.style.top        = curTop  + 'px';
+
+            this.dragOffX = event.clientX - curLeft;
+            this.dragOffY = event.clientY - curTop;
+
+            el.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+
+            document.addEventListener('mousemove', this._onMove);
+            document.addEventListener('mouseup',   this._onStop);
+        },
+
+        onDrag(event) {
+            if (!this.dragging) return;
+            event.preventDefault();
+            const paper  = document.getElementById('bpn-paper');
+            const pRect  = paper.getBoundingClientRect();
+            let newLeft  = event.clientX - this.dragOffX;
+            let newTop   = event.clientY - this.dragOffY;
+
+            // Clamp inside paper boundaries (loose)
+            newLeft = Math.max(-50, Math.min(newLeft, pRect.width - 20));
+            newTop  = Math.max(-20, Math.min(newTop,  1123 - 20));
+
+            this.dragging.style.left = newLeft + 'px';
+            this.dragging.style.top  = newTop  + 'px';
+        },
+
+        stopDrag() {
+            if (!this.dragging) return;
+            this.dragging.style.cursor = 'default';
+            document.body.style.userSelect = '';
+
+            // Simpan posisi di Alpine (tidak kirim ke server setiap drag
+            // untuk hindari Livewire re-render yang mereset posisi).
+            // Posisi akan dikirim bersama bpn_html saat onEdit() dipanggil.
+            const elId = this.dragging.id;
+            const top  = Math.round(parseFloat(this.dragging.style.top)  || 0);
+            const left = Math.round(parseFloat(this.dragging.style.left) || 0);
+
+            // Kirim posisi tanpa menunggu respons (fire-and-forget)
+            $wire.saveElementPosition(elId, top, left);
+
+            this.dragging = null;
+            document.removeEventListener('mousemove', this._onMove);
+            document.removeEventListener('mouseup',   this._onStop);
+        },
+
+        // ── Content Sync ───────────────────────────────────
+        onEdit() {
+            this.saved = false;
+            clearTimeout(this.saveTimer);
+            this.saveTimer = setTimeout(() => {
+                const html = document.getElementById('bpn-editor')?.innerHTML || '';
+                $wire.saveBpnContent(html).then(() => { this.saved = true; });
+            }, 800);
+        },
+
+        handlePaste(event) {
+            // Smart paste: try plain text first, fallback to sanitised HTML
+            const cd   = event.clipboardData || window.clipboardData;
+            const text = cd.getData('text/plain');
+            if (text) {
+                document.execCommand('insertText', false, text);
+            } else {
+                const html = cd.getData('text/html');
+                // Strip dangerous tags, keep basic formatting
+                const div  = document.createElement('div');
+                div.innerHTML = html;
+                ['script','style','head','meta','link','object','iframe'].forEach(tag => {
+                    div.querySelectorAll(tag).forEach(el => el.remove());
+                });
+                document.execCommand('insertHTML', false, div.innerHTML);
+            }
+        },
+
+        // ── Formatting ─────────────────────────────────────
+        execCmd(cmd, value = null) {
+            document.getElementById('bpn-editor')?.focus();
+            document.execCommand(cmd, false, value);
+            this.updateToolbarState();
+        },
+
+        setFontSize(sizePx) {
+            const editor = document.getElementById('bpn-editor');
+            if (!editor) return;
+            editor.focus();
+
+            const sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0) return;
+
+            if (sel.isCollapsed) {
+                // No selection — just set current font size marker
+                document.execCommand('fontSize', false, '7');
+                editor.querySelectorAll('font[size="7"]').forEach(el => {
+                    el.removeAttribute('size');
+                    el.style.fontSize = sizePx + 'px';
+                });
+                return;
+            }
+
+            // Wrap selection in a span with the desired font size
+            const range = sel.getRangeAt(0);
+            const span  = document.createElement('span');
+            span.style.fontSize = sizePx + 'px';
+            try {
+                range.surroundContents(span);
+            } catch (e) {
+                // Range crosses node boundaries — use execCommand fallback
+                document.execCommand('fontSize', false, '7');
+                editor.querySelectorAll('font[size="7"]').forEach(el => {
+                    el.removeAttribute('size');
+                    el.style.fontSize = sizePx + 'px';
+                });
+            }
+            this.updateToolbarState();
+        },
+
+        updateToolbarState() {
+            try {
+                this.isBold      = document.queryCommandState('bold');
+                this.isItalic    = document.queryCommandState('italic');
+                this.isUnderline = document.queryCommandState('underline');
+            } catch(e) {}
+        },
+    }));
+});
+</script>

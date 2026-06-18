@@ -65,16 +65,16 @@ class Reservation extends Model
 
     public function getCustomerNameAttribute(): string
     {
-        if ($this->user) {
-            return $this->user->name;
-        }
-        
         $data = $this->customer_data ?? [];
         // Coba cari field yang mengandung kata 'nama' atau 'name'
         foreach ($data as $key => $value) {
             if (stripos($key, 'nama') !== false || stripos($key, 'name') !== false) {
-                return $value;
+                if (!empty($value)) return $value;
             }
+        }
+        
+        if ($this->user) {
+            return $this->user->name;
         }
         
         return 'Tamu (Guest)';
@@ -82,15 +82,15 @@ class Reservation extends Model
 
     public function getCustomerPhoneAttribute(): string
     {
-        if ($this->user) {
-            return $this->user->phone_number ?? '-';
-        }
-        
         $data = $this->customer_data ?? [];
         foreach ($data as $key => $value) {
             if (stripos($key, 'hp') !== false || stripos($key, 'telp') !== false || stripos($key, 'phone') !== false || stripos($key, 'wa') !== false) {
-                return $value;
+                if (!empty($value)) return $value;
             }
+        }
+        
+        if ($this->user) {
+            return $this->user->phone_number ?? '-';
         }
         
         return '-';

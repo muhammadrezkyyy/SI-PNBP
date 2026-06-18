@@ -143,9 +143,9 @@
                     @endif
                 </td>
                 <td class="title">
-                    Kementerian Keuangan RI<br>
-                    Direktorat Jenderal Anggaran<br>
-                    SISTEM INFORMASI PNBP ONLINE (SIMPONI)
+                    {!! $data['header_1'] ?? 'Kementerian Keuangan RI' !!}<br>
+                    {!! $data['header_2'] ?? 'Direktorat Jenderal Anggaran' !!}<br>
+                    {!! $data['header_3'] ?? 'SISTEM INFORMASI PNBP ONLINE (SIMPONI)' !!}
                 </td>
                 <td style="width: 85px; text-align: right;">
                     @if(isset($data['qr_content']))
