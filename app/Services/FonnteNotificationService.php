@@ -141,4 +141,43 @@ class FonnteNotificationService
             . "Pembayaran wajib dilakukan dalam *72 jam*.\n"
             . "_Abaikan pesan ini jika Anda tidak merasa melakukan reservasi._";
     }
+
+    /**
+     * Validate if a phone number is registered on WhatsApp.
+     */
+    public function validateNumber(string $phoneNumber): bool
+    {
+        $token = config('services.fonnte.token');
+
+        if (empty($token)) {
+            Log::warning('[Fonnte] Token not configured. Skipping WA validation.');
+            return true; // Bypass validation if token is not set
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => $token,
+            ])->post('https://api.fonnte.com/validate', [
+                'target' => $phoneNumber,
+            ]);
+
+            $json = $response->json();
+            
+            // Fonnte structure: "status" => true, "registered" => [...], "unregistered" => [...]
+            if ($response->successful() && isset($json['status']) && $json['status'] === true) {
+                // If the number is in the "registered" array, it is a valid WA number.
+                return !empty($json['registered']) && empty($json['unregistered']);
+            }
+
+            // If API returns false status or error, don't strictly block the user 
+            // in case Fonnte is down, just return true as a fallback.
+            return true; 
+        } catch (\Exception $e) {
+            Log::error('[Fonnte] Exception during WA validate.', [
+                'target'    => $phoneNumber,
+                'exception' => $e->getMessage(),
+            ]);
+            return true; // fallback
+        }
+    }
 }

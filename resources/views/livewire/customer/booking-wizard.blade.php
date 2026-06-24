@@ -378,9 +378,9 @@
                         <div class="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800 mb-6">
                             <p class="font-semibold mb-1">⚠️ Perhatikan</p>
                             <ul class="list-disc list-inside space-y-1 text-xs">
-                                <li>Reservasi akan terkunci selama 24 jam menunggu tagihan dari Admin.</li>
-                                <li>Setelah tagihan diterima, Anda memiliki 72 jam untuk melakukan pembayaran.</li>
-                                <li>Reservasi yang melewati batas waktu akan otomatis dibatalkan.</li>
+                                <li>Reservasi Anda akan dikonfirmasi oleh Admin maksimal 1x24 jam kerja (Sabtu, Minggu, dan hari libur nasional tidak dihitung).</li>
+                                <li>Setelah tagihan SIMPONI diterbitkan, Anda memiliki waktu 24 jam untuk menyelesaikan pembayaran.</li>
+                                <li>Reservasi yang melewati batas waktu pembayaran akan otomatis dibatalkan oleh sistem.</li>
                             </ul>
                         </div>
                         

@@ -88,8 +88,9 @@ class BookingWizard extends Component
 
         // Double-check availability
         if (Reservation::hasConflict($this->building_id, $this->start_date, $this->end_date)) {
-            $this->addError('building_id', 'Unit ini sudah dipesan untuk tanggal tersebut. Pilih unit lain.');
-            return;
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'building_id' => 'Unit ini sudah dipesan untuk tanggal tersebut. Pilih unit lain.'
+            ]);
         }
     }
 
@@ -122,6 +123,31 @@ class BookingWizard extends Component
 
         if (!empty($rules)) {
             $this->validate($rules, $messages);
+        }
+
+        // WhatsApp Number Validation
+        $fonnte = app(\App\Services\FonnteNotificationService::class);
+        foreach ($fields as $field) {
+            if (in_array(strtolower($field->field_name), ['whatsapp', 'phone', 'no_telp', 'telepon', 'nohp', 'no_hp'])) {
+                $key = "customer_data.{$field->field_name}";
+                $number = $this->customer_data[$field->field_name] ?? null;
+                
+                if ($number) {
+                    // 1. Validasi Regex Dasar (Format Indonesia: 08xxx / 628xxx / +628xxx)
+                    if (!preg_match('/^(\+62|62|0)8[1-9][0-9]{6,11}$/', $number)) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            $key => 'Format nomor WhatsApp tidak valid. Harus diawali 08, 628, atau +628 (contoh: 081234567890).'
+                        ]);
+                    }
+
+                    // 2. Validasi via Fonnte (Apakah terdaftar di WA)
+                    if (!$fonnte->validateNumber($number)) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            $key => 'Nomor ini tidak terdaftar di WhatsApp. Pastikan nomor aktif agar notifikasi dapat diterima.'
+                        ]);
+                    }
+                }
+            }
         }
     }
 

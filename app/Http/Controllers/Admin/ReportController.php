@@ -42,7 +42,7 @@ class ReportController extends Controller
 
         // Calculate totals
         $totalRevenue = $reservations
-            ->whereIn('status', ['CONFIRMED', 'COMPLETED'])
+            ->filter(fn($r) => in_array($r->status instanceof \App\Enums\ReservationStatus ? $r->status->value : $r->status, ['CONFIRMED', 'COMPLETED']))
             ->sum(fn($r) => $r->payment ? $r->payment->nominal : 0);
 
         $statusLabels = [

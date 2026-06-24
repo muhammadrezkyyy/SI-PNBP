@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Payment;
 use App\Services\FonnteNotificationService;
 use App\Services\ReservationService;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -19,11 +20,7 @@ class AuditDashboard extends Component
     public bool    $zoom_open             = false;
     public ?Payment $payment              = null;
 
-    /** Full edited HTML content from the Word-like editor */
-    public string  $bpn_html             = '';
 
-    /** Positions of draggable elements (QR, logo) in px relative to paper */
-    public array   $element_positions    = [];
 
     public function mount(Payment $payment): void
     {
@@ -65,36 +62,6 @@ class AuditDashboard extends Component
         ];
         $this->simponi_data = array_merge($defaults, $this->simponi_data);
 
-        // Default draggable element positions (matching original CSS layout)
-        $this->element_positions = [
-            'bpn-el-logo'         => ['top' => 0,   'left' => 0,    'useRight'  => false, 'useCenter' => false],
-            'bpn-el-qr-header'    => ['top' => 0,   'left' => 609,  'useRight'  => true,  'useCenter' => false],
-            'bpn-el-qr-watermark' => ['top' => 210, 'left' => 147,  'useRight'  => false, 'useCenter' => false],
-        ];
-    }
-
-    /**
-     * Save the full edited HTML from the Word-like editor.
-     * #[Renderless] agar auto-save tidak trigger re-render komponen.
-     */
-    #[\Livewire\Attributes\Renderless]
-    public function saveBpnContent(string $html): void
-    {
-        $this->bpn_html = $html;
-    }
-
-    /**
-     * Save the absolute pixel position of a draggable element.
-     * #[Renderless] = simpan data tapi TIDAK trigger re-render komponen,
-     * sehingga posisi drag yang sudah diset via JS tidak di-reset.
-     */
-    #[\Livewire\Attributes\Renderless]
-    public function saveElementPosition(string $elId, int $top, int $left): void
-    {
-        $this->element_positions[$elId] = array_merge(
-            $this->element_positions[$elId] ?? [],
-            ['top' => $top, 'left' => $left, 'useRight' => false, 'useCenter' => false]
-        );
     }
 
     public function submitAudit(
@@ -143,10 +110,21 @@ class AuditDashboard extends Component
             ],
         ]);
 
-        $phoneNumber = $reservation->user->phone_number
+        // Prioritaskan nomor dari customer_data (diisi pelanggan saat booking)
+        $phoneNumber = ($reservation->customer_data['no_telp'] ?? null)
             ?? ($reservation->customer_data['whatsapp'] ?? null)
             ?? ($reservation->customer_data['phone'] ?? null)
-            ?? ($reservation->customer_data['no_telp'] ?? null);
+            ?? ($reservation->customer_data['no_hp'] ?? null)
+            ?? ($reservation->customer_data['telepon'] ?? null)
+            ?? ($reservation->customer_data['nohp'] ?? null)
+            ?? ($reservation->user?->phone_number ?? null);
+
+        Log::info('[AuditDashboard] Resolusi nomor WA untuk notifikasi.', [
+            'reservation_id'     => $reservation->id,
+            'phone_resolved'     => $phoneNumber,
+            'audit_decision'     => $this->audit_decision,
+            'customer_data_keys' => array_keys($reservation->customer_data ?? []),
+        ]);
 
         if ($this->audit_decision === 'APPROVE') {
             $this->payment->update([
@@ -178,40 +156,6 @@ class AuditDashboard extends Component
 
         $this->submitted = true;
         $this->dispatch('audit-submitted', decision: $this->audit_decision);
-    }
-
-    public function reprintPdf(\App\Services\PdfGeneratorService $pdfGenerator): void
-    {
-        if (!$this->payment) return;
-
-        // Jika admin sudah klik "Simpan Editan", $bpn_html berisi full #bpn-paper HTML snapshot
-        // → generate PDF 1:1 persis seperti tampilan editor
-        // Jika belum pernah klik "Simpan", fallback ke Blade template
-        if (!empty($this->bpn_html)) {
-            $newPdfPath = $pdfGenerator->generateFromEditedHtml(
-                $this->bpn_html,
-                $this->simponi_data,
-                $this->element_positions
-            );
-        } else {
-            $data = array_merge($this->simponi_data, [
-                'qr_content' => 'SIMPONI-BILLING-' . ($this->simponi_data['kode_billing'] ?? time()),
-                'ntb'        => $this->simponi_data['ntb']  ?? $this->payment->ntb  ?? '',
-                'ntpn'       => $this->simponi_data['ntpn'] ?? $this->payment->ntpn ?? '',
-            ]);
-            $newPdfPath = $pdfGenerator->generateSimponiPdf($data);
-        }
-
-        if ($newPdfPath) {
-            // Hapus file lama agar tidak menumpuk
-            if ($this->payment->simponi_pdf_path) {
-                \Illuminate\Support\Facades\Storage::disk('local')
-                    ->delete($this->payment->simponi_pdf_path);
-            }
-            $this->payment->update(['simponi_pdf_path' => $newPdfPath]);
-            $this->dispatch('simponi-pdf-updated');
-            $this->dispatch('notify', message: 'PDF berhasil diperbarui. Klik "Buka PDF" untuk mencetak.');
-        }
     }
 
     public function toggleZoom(): void

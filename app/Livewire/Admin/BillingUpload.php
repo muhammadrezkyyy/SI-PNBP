@@ -7,6 +7,7 @@ use App\Models\Reservation;
 use App\Services\FonnteNotificationService;
 use App\Services\ReservationService;
 use App\Services\SimponiParserService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -140,10 +141,21 @@ class BillingUpload extends Component
         $reservationService->transitionToWaitingPayment($this->reservation);
 
         // Send WhatsApp billing instruction
-        $phoneNumber = $this->reservation->user->phone_number
+        // Prioritaskan nomor dari customer_data (yang diisi pelanggan saat booking),
+        // karena user->phone_number bisa berisi nomor lain (misal nomor admin jika booking dibuat oleh admin).
+        $phoneNumber = ($this->reservation->customer_data['no_telp'] ?? null)
             ?? ($this->reservation->customer_data['whatsapp'] ?? null)
-            ?? ($this->reservation->customer_data['no_telp'] ?? null)
-            ?? ($this->reservation->customer_data['phone'] ?? null);
+            ?? ($this->reservation->customer_data['phone'] ?? null)
+            ?? ($this->reservation->customer_data['no_hp'] ?? null)
+            ?? ($this->reservation->customer_data['telepon'] ?? null)
+            ?? ($this->reservation->customer_data['nohp'] ?? null)
+            ?? ($this->reservation->user?->phone_number ?? null);
+
+        Log::info('[BillingUpload] Mengirim notifikasi WA ke pelanggan.', [
+            'reservation_id' => $this->reservation->id,
+            'phone_resolved'  => $phoneNumber,
+            'customer_data_keys' => array_keys($this->reservation->customer_data ?? []),
+        ]);
 
         if ($phoneNumber) {
             $fonnte->sendBillingInstruction(

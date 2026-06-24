@@ -10,6 +10,7 @@ enum ReservationStatus: string
     case CONFIRMED        = 'CONFIRMED';
     case REJECTED         = 'REJECTED';
     case EXPIRED          = 'EXPIRED';
+    case COMPLETED        = 'COMPLETED';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum ReservationStatus: string
             self::CONFIRMED       => 'Dikonfirmasi',
             self::REJECTED        => 'Ditolak',
             self::EXPIRED         => 'Kedaluwarsa',
+            self::COMPLETED       => 'Selesai',
         };
     }
 
@@ -32,6 +34,7 @@ enum ReservationStatus: string
             self::CONFIRMED       => 'green',
             self::REJECTED        => 'red',
             self::EXPIRED         => 'gray',
+            self::COMPLETED       => 'teal',
         };
     }
 
@@ -44,6 +47,7 @@ enum ReservationStatus: string
             self::CONFIRMED       => 'badge-success',
             self::REJECTED        => 'badge-danger',
             self::EXPIRED         => 'badge-secondary',
+            self::COMPLETED       => 'badge-info', // Or any custom class they have
         };
     }
 

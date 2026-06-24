@@ -8,9 +8,9 @@ class ReportPaymentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Ensure the authenticated user owns this reservation
-        $reservation = $this->route('reservation');
-        return $reservation && $this->user()?->id === $reservation->user_id;
+        // The URL uses an unguessable UUID which acts as a secret token.
+        // Therefore, we allow anyone with the link to upload the payment proof.
+        return true;
     }
 
     public function rules(): array

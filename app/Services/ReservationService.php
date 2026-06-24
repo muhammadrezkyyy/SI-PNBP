@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\ReservationStatus;
 use App\Models\Reservation;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -62,22 +63,33 @@ class ReservationService
 
     /**
      * Transition a reservation to WAITING_PAYMENT after billing is uploaded.
+     * Pelanggan wajib membayar dalam 24 jam.
      */
     public function transitionToWaitingPayment(Reservation $reservation): void
     {
         $reservation->update([
             'status'          => ReservationStatus::WAITING_PAYMENT,
-            'lock_expires_at' => now()->addHours(72),
+            'lock_expires_at' => now()->addHours(24),
         ]);
     }
 
     /**
      * Transition a reservation to VERIFYING after customer submits NTPN.
+     *
+     * Deadline admin dihitung berdasarkan HARI KERJA (Senin–Jumat):
+     * - Upload Senin s/d Kamis → deadline 3 hari kerja berikutnya
+     * - Upload Jumat           → deadline Rabu (skip Sabtu & Minggu)
+     * - Upload Sabtu/Minggu    → deadline dihitung mulai Senin berikutnya
+     *
+     * Ini mencegah reservasi expired saat admin libur akhir pekan.
      */
     public function transitionToVerifying(Reservation $reservation): void
     {
+        $deadline = $this->addWorkingDays(now(), 3);
+
         $reservation->update([
-            'status' => ReservationStatus::VERIFYING,
+            'status'          => ReservationStatus::VERIFYING,
+            'lock_expires_at' => $deadline,
         ]);
     }
 
@@ -101,5 +113,37 @@ class ReservationService
             'status'          => ReservationStatus::REJECTED,
             'lock_expires_at' => null,
         ]);
+    }
+
+    /**
+     * Hitung tanggal deadline dengan menambahkan N hari kerja (skip Sabtu & Minggu).
+     * Jika titik mulai adalah hari weekend, mulai dihitung dari Senin berikutnya.
+     *
+     * Contoh:
+     *   Senin  + 3 hari kerja = Kamis
+     *   Kamis  + 3 hari kerja = Selasa
+     *   Jumat  + 3 hari kerja = Rabu   (skip Sabtu & Minggu)
+     *   Sabtu  + 3 hari kerja = Rabu   (mulai hitung dari Senin)
+     *   Minggu + 3 hari kerja = Rabu   (mulai hitung dari Senin)
+     */
+    private function addWorkingDays(Carbon $from, int $days): Carbon
+    {
+        $date = $from->copy();
+
+        // Jika mulai dari weekend, lompat ke Senin pagi jam 08:00
+        if ($date->isWeekend()) {
+            $date->next(Carbon::MONDAY)->setTime(8, 0, 0);
+        }
+
+        $added = 0;
+        while ($added < $days) {
+            $date->addDay();
+            if (!$date->isWeekend()) {
+                $added++;
+            }
+        }
+
+        // Batas akhir pukul 17:00 (jam kantor selesai)
+        return $date->setTime(17, 0, 0);
     }
 }
