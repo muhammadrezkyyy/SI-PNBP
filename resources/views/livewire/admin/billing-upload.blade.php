@@ -65,7 +65,7 @@
                                         </svg>
                                     </div>
                                     <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Klik atau seret file PDF ke sini</p>
-                                    <p class="text-xs text-slate-400 mt-1">Format: PDF A Maksimal 10 MB</p>
+                                    <p class="text-xs text-slate-400 mt-1">Format: PDF A Maksimal 2 MB</p>
                                 @else
                                     <div class="flex flex-col items-center gap-2">
                                         <div class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">

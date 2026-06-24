@@ -43,7 +43,7 @@ class BillingUpload extends Component
     {
         $this->resetExtractedData();
         $this->validateOnly('simponi_pdf', [
-            'simponi_pdf' => 'required|file|mimes:pdf|max:10240',
+            'simponi_pdf' => 'required|file|mimes:pdf|max:2048',
         ]);
 
         if ($this->simponi_pdf) {
@@ -93,7 +93,7 @@ class BillingUpload extends Component
         FonnteNotificationService $fonnte
     ) {
         $this->validate([
-            'simponi_pdf' => [$this->is_manual ? 'nullable' : 'required', 'file', 'mimes:pdf', 'max:10240'],
+            'simponi_pdf' => [$this->is_manual ? 'nullable' : 'required', 'file', 'mimes:pdf', 'max:2048'],
         ]);
 
         if ($this->is_manual) {
