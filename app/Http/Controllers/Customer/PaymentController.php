@@ -34,8 +34,9 @@ class PaymentController extends Controller
      */
     public function store(ReportPaymentRequest $request, Reservation $reservation, \App\Services\FonnteNotificationService $fonnte): RedirectResponse
     {
-        // Store receipt image privately on the local disk
-        $receiptPath = $request->file('receipt_image')->store('receipts', 'local');
+        // Store receipt image to default disk: 's3' di Railway, 'local' di lokal
+        $disk        = config('filesystems.default', 'local');
+        $receiptPath = $request->file('receipt_image')->store('receipts', $disk);
 
         // Update payment record with receipt
         $reservation->payment->update([
@@ -65,12 +66,21 @@ class PaymentController extends Controller
             abort(404, 'File tagihan SIMPONI tidak ditemukan.');
         }
 
-        $path = \Illuminate\Support\Facades\Storage::disk('local')->path($payment->simponi_pdf_path);
-        
-        if (! file_exists($path)) {
+        $disk    = config('filesystems.default', 'local');
+        $storage = \Illuminate\Support\Facades\Storage::disk($disk);
+
+        if (! $storage->exists($payment->simponi_pdf_path)) {
             abort(404, 'File tagihan SIMPONI tidak ditemukan.');
         }
 
-        return response()->file($path);
+        if ($disk === 'local') {
+            return response()->file($storage->path($payment->simponi_pdf_path));
+        }
+
+        // S3/R2: stream file langsung
+        return response($storage->get($payment->simponi_pdf_path), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline',
+        ]);
     }
 }

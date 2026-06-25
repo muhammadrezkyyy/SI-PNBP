@@ -46,13 +46,25 @@ class BillingController extends Controller
         $rawText = '';
 
         if ($request->hasFile('simponi_pdf')) {
-            // Store PDF privately
-            $pdfPath = $request->file('simponi_pdf')->store('simponi-pdfs', 'local');
+            // Store PDF ke disk default: 's3' di Railway, 'local' di lokal
+            $disk    = config('filesystems.default', 'local');
+            $pdfPath = $request->file('simponi_pdf')->store('simponi-pdfs', $disk);
 
             // Extract text from PDF
             try {
                 $parser  = new PdfParser();
-                $pdf     = $parser->parseFile(Storage::disk('local')->path($pdfPath));
+                $storage = Storage::disk($disk);
+
+                if ($disk === 'local') {
+                    $pdf = $parser->parseFile($storage->path($pdfPath));
+                } else {
+                    // S3/R2: download ke temp dulu
+                    $tmpPath = tempnam(sys_get_temp_dir(), 'simponi_') . '.pdf';
+                    file_put_contents($tmpPath, $storage->get($pdfPath));
+                    $pdf = $parser->parseFile($tmpPath);
+                    @unlink($tmpPath);
+                }
+
                 $rawText = $pdf->getText();
             } catch (\Exception $e) {
                 return back()->withErrors(['simponi_pdf' => 'Gagal membaca PDF. Pastikan file tidak terenkripsi.']);
@@ -81,7 +93,9 @@ class BillingController extends Controller
             $parsed = $this->parser->parsePdf($rawText);
 
             if ($parsed['status'] === 'error') {
-                Storage::disk('local')->delete($pdfPath);
+                // Hapus PDF yang sudah diupload jika parsing gagal
+                $disk = config('filesystems.default', 'local');
+                Storage::disk($disk)->delete($pdfPath);
                 return back()->withErrors([
                     'simponi_pdf' => implode(' ', $parsed['errors']),
                 ])->withInput();

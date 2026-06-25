@@ -88,28 +88,43 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.export');
 
-    // Endpoint untuk melihat gambar bukti pembayaran (disimpan di disk 'private')
+    // Endpoint untuk melihat gambar bukti pembayaran (disimpan di disk default)
     Route::get('/receipt/{payment}', function (\App\Models\Payment $payment) {
         if (! $payment->receipt_path) {
             abort(404);
         }
-        $path = storage_path('app/private/' . $payment->receipt_path);
-        if (! file_exists($path)) {
+
+        $disk = config('filesystems.default', 'local');
+        $storage = \Illuminate\Support\Facades\Storage::disk($disk);
+
+        if (! $storage->exists($payment->receipt_path)) {
             abort(404);
         }
-        return response()->file($path);
+
+        if ($disk === 'local') {
+            return response()->file($storage->path($payment->receipt_path));
+        }
+
+        // S3/R2: stream file langsung
+        return response($storage->get($payment->receipt_path), 200, [
+            'Content-Type'        => $storage->mimeType($payment->receipt_path),
+            'Content-Disposition' => 'inline',
+        ]);
     })->name('receipt.view');
 
     // Endpoint untuk melihat PDF asli SIMPONI (dengan tombol cetak)
     Route::get('/simponi/{payment}', function (\App\Models\Payment $payment) {
         if (! $payment->simponi_pdf_path) {
-            abort(404, "Payment has no simponi_pdf_path");
+            abort(404, 'Payment has no simponi_pdf_path');
         }
-        $path = storage_path('app/private/' . $payment->simponi_pdf_path);
-        if (! file_exists($path)) {
-            abort(404, "File does not exist: " . $path);
+
+        $disk    = config('filesystems.default', 'local');
+        $storage = \Illuminate\Support\Facades\Storage::disk($disk);
+
+        if (! $storage->exists($payment->simponi_pdf_path)) {
+            abort(404, 'File SIMPONI tidak ditemukan di storage.');
         }
-        // Return PDF file URL untuk ditampilkan di iframe
+
         $pdfUrl = route('admin.simponi.stream', $payment);
         return view('admin.simponi-viewer', compact('payment', 'pdfUrl'));
     })->name('simponi.view');
@@ -117,13 +132,26 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     // Stream file PDF mentah (untuk iframe)
     Route::get('/simponi/{payment}/stream', function (\App\Models\Payment $payment) {
         if (! $payment->simponi_pdf_path) abort(404);
-        $path = storage_path('app/private/' . $payment->simponi_pdf_path);
-        if (! file_exists($path)) abort(404);
-        return response()->file($path, [
+
+        $disk    = config('filesystems.default', 'local');
+        $storage = \Illuminate\Support\Facades\Storage::disk($disk);
+
+        if (! $storage->exists($payment->simponi_pdf_path)) abort(404);
+
+        if ($disk === 'local') {
+            return response()->file($storage->path($payment->simponi_pdf_path), [
+                'Content-Disposition' => 'inline',
+                'Cache-Control'       => 'no-cache, no-store, must-revalidate',
+            ]);
+        }
+
+        // S3/R2: stream file
+        return response($storage->get($payment->simponi_pdf_path), 200, [
+            'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline',
-            'Cache-Control' => 'no-cache, no-store, must-revalidate',
-            'Pragma' => 'no-cache',
-            'Expires' => '0'
+            'Cache-Control'       => 'no-cache, no-store, must-revalidate',
+            'Pragma'              => 'no-cache',
+            'Expires'             => '0',
         ]);
     })->name('simponi.stream');
 });

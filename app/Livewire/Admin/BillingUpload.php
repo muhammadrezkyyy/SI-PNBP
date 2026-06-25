@@ -47,7 +47,14 @@ class BillingUpload extends Component
         ]);
 
         if ($this->simponi_pdf) {
-            $this->pdf_preview_url = $this->simponi_pdf->temporaryUrl();
+            // temporaryUrl() hanya support S3/cloud disk.
+            // Di local disk akan throw exception, jadi kita fallback ke null.
+            try {
+                $this->pdf_preview_url = $this->simponi_pdf->temporaryUrl();
+            } catch (\RuntimeException $e) {
+                // Fallback: preview tidak tersedia di disk local
+                $this->pdf_preview_url = null;
+            }
             $this->parsePdf();
         }
     }
@@ -121,7 +128,9 @@ class BillingUpload extends Component
 
         $pdfPath = null;
         if ($this->simponi_pdf) {
-            $pdfPath = $this->simponi_pdf->store('simponi-pdfs', 'local');
+            // Gunakan disk default: 's3' di Railway (Cloudflare R2), 'local' di lokal
+            $disk    = config('filesystems.default', 'local');
+            $pdfPath = $this->simponi_pdf->store('simponi-pdfs', $disk);
         }
 
         // Create Payment record

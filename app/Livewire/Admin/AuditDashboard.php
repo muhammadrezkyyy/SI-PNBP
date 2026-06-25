@@ -28,11 +28,24 @@ class AuditDashboard extends Component
 
         // Parse full SIMPONI data from the PDF file if it exists
         if ($this->payment->simponi_pdf_path) {
-            $disk = \Illuminate\Support\Facades\Storage::disk('local');
-            if ($disk->exists($this->payment->simponi_pdf_path)) {
+            $disk        = config('filesystems.default', 'local');
+            $storageDisk = \Illuminate\Support\Facades\Storage::disk($disk);
+
+            if ($storageDisk->exists($this->payment->simponi_pdf_path)) {
                 try {
-                    $parser = new \Smalot\PdfParser\Parser();
-                    $pdf    = $parser->parseFile($disk->path($this->payment->simponi_pdf_path));
+                    $parser  = new \Smalot\PdfParser\Parser();
+
+                    if ($disk === 'local') {
+                        // Disk lokal: bisa langsung akses path
+                        $pdf = $parser->parseFile($storageDisk->path($this->payment->simponi_pdf_path));
+                    } else {
+                        // S3/R2: download ke file temp dulu
+                        $tmpPath = tempnam(sys_get_temp_dir(), 'simponi_') . '.pdf';
+                        file_put_contents($tmpPath, $storageDisk->get($this->payment->simponi_pdf_path));
+                        $pdf = $parser->parseFile($tmpPath);
+                        @unlink($tmpPath);
+                    }
+
                     $rawText = $pdf->getText();
 
                     $simponiParser = app(\App\Services\SimponiParserService::class);
