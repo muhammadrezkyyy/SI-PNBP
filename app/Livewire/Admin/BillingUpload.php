@@ -69,9 +69,31 @@ class BillingUpload extends Component
 
     private function parsePdf()
     {
+        $tmpPath = null;
         try {
             $parser = new PdfParser();
-            $pdf = $parser->parseFile($this->simponi_pdf->getRealPath());
+
+            // getRealPath() hanya bisa digunakan pada disk 'local'.
+            // Saat menggunakan S3/R2 sebagai temp disk, getRealPath() = '' (kosong).
+            // Solusi: download file dari S3 ke temp lokal dulu, baru parse.
+            $realPath = $this->simponi_pdf->getRealPath();
+
+            if ($realPath && file_exists($realPath)) {
+                // Disk lokal — langsung gunakan path file
+                $pdf = $parser->parseFile($realPath);
+            } else {
+                // S3 / R2 — download konten file ke temp lokal dulu
+                $livewireDisk = config('livewire.temporary_file_upload.disk')
+                    ?? config('filesystems.default', 'local');
+
+                $fileContent = Storage::disk($livewireDisk)
+                    ->get($this->simponi_pdf->getPathname());
+
+                $tmpPath = tempnam(sys_get_temp_dir(), 'sipnbp_') . '.pdf';
+                file_put_contents($tmpPath, $fileContent);
+                $pdf = $parser->parseFile($tmpPath);
+            }
+
             $this->raw_text = $pdf->getText();
 
             $simponiParser = app(SimponiParserService::class);
@@ -80,7 +102,7 @@ class BillingUpload extends Component
             if ($parsed['status'] === 'success') {
                 $this->extracted_billing_code = $parsed['billing_code'];
                 $this->extracted_nominal = $parsed['nominal'];
-                
+
                 // Auto-fill manual inputs and enable edit mode
                 $this->manual_billing_code = $parsed['billing_code'];
                 $this->manual_nominal = $parsed['nominal'];
@@ -90,8 +112,14 @@ class BillingUpload extends Component
                 $this->is_manual = true; // Auto open manual mode on error
             }
         } catch (\Exception $e) {
+            Log::error('[BillingUpload] parsePdf failed: ' . $e->getMessage());
             $this->extracted_error = 'Gagal membaca PDF. Pastikan file tidak terenkripsi.';
             $this->is_manual = true;
+        } finally {
+            // Selalu hapus temp file meskipun ada exception
+            if ($tmpPath && file_exists($tmpPath)) {
+                @unlink($tmpPath);
+            }
         }
     }
 
