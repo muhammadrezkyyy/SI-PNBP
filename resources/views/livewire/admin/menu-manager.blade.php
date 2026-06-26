@@ -26,24 +26,37 @@
                 <thead>
                     <tr class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700/50">
                         <th class="px-6 py-3 text-left font-semibold text-slate-500 dark:text-slate-400 w-16">Urutan</th>
+                        <th class="px-6 py-3 text-left font-semibold text-slate-500 dark:text-slate-400">Grup / Header</th>
                         <th class="px-6 py-3 text-left font-semibold text-slate-500 dark:text-slate-400">Label Menu</th>
                         <th class="px-6 py-3 text-left font-semibold text-slate-500 dark:text-slate-400">Route</th>
                         <th class="px-6 py-3 text-center font-semibold text-slate-500 dark:text-slate-400">Status</th>
                         <th class="px-6 py-3 text-right font-semibold text-slate-500 dark:text-slate-400">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 dark:divide-slate-700/30">
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700/30" id="sortable-menu-list">
                     @forelse($menus as $index => $menu)
-                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors" data-id="{{ $menu->id }}" wire:key="menu-{{ $menu->id }}">
                             <td class="px-6 py-4">
                                 <div class="flex flex-col items-center gap-1">
                                     <button wire:click="moveUp({{ $menu->id }})" class="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400" @if($loop->first) disabled @endif>
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
                                     </button>
+                                    <div class="cursor-move drag-handle my-0.5" title="Drag untuk mengubah urutan">
+                                        <svg class="h-5 w-5 text-slate-400 hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+                                        </svg>
+                                    </div>
                                     <button wire:click="moveDown({{ $menu->id }})" class="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400" @if($loop->last) disabled @endif>
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                     </button>
                                 </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                @if($menu->group)
+                                    <span class="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10 dark:bg-indigo-400/10 dark:text-indigo-400 dark:ring-indigo-400/30">{{ $menu->group }}</span>
+                                @else
+                                    <span class="text-xs text-slate-400">-</span>
+                                @endif
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
@@ -111,6 +124,13 @@
                 </div>
                 
                 <div>
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Grup / Header Menu</label>
+                    <input type="text" wire:model="group" placeholder="Contoh: SISTEM, FASILITAS (Opsional)" class="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-sm focus:border-blue-500 focus:ring focus:ring-blue-200 dark:focus:ring-blue-500/30 dark:text-white transition-all uppercase">
+                    <p class="text-xs text-slate-400 mt-1">Kosongkan jika menu tidak masuk grup apapun. Huruf kapital lebih rapi.</p>
+                    @error('group') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                
+                <div>
                     <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Route Name <span class="text-red-500">*</span></label>
                     <input type="text" wire:model="route" placeholder="Contoh: admin.reports.index" class="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-sm focus:border-blue-500 focus:ring focus:ring-blue-200 dark:focus:ring-blue-500/30 dark:text-white transition-all">
                     <p class="text-xs text-slate-400 mt-1">Pastikan route ini valid dan terdaftar di file rute Laravel.</p>
@@ -142,3 +162,39 @@
     </div>
     @endif
 </div>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script>
+    document.addEventListener('livewire:initialized', () => {
+        let el = document.getElementById('sortable-menu-list');
+        if (el) {
+            new Sortable(el, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'bg-slate-100',
+                onEnd: function (evt) {
+                    let itemEls = el.querySelectorAll('tr[data-id]');
+                    let orderedIds = Array.from(itemEls).map(itemEl => itemEl.getAttribute('data-id'));
+                    
+                    fetch('{{ route("admin.menus.reorder") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ orderedIds: orderedIds })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Order saved successfully, no flash needed
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                }
+            });
+        }
+    });
+</script>
+@endpush

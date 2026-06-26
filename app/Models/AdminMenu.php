@@ -10,6 +10,7 @@ class AdminMenu extends Model
     use HasFactory;
 
     protected $fillable = [
+        'group',
         'label',
         'route',
         'icon',

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="SI-RESERVASI PNBP — Panel Admin">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin — SI-RESERVASI PNBP')</title>
     @php
         $primaryColor = \App\Models\AppSetting::getVal('primary_color', '#0e1f40');
@@ -95,13 +96,23 @@
     </div>
 
     {{-- Nav --}}
-    <nav class="mt-4 px-4 space-y-1">
+    <nav class="mt-4 px-4 space-y-1 pb-24 overflow-y-auto max-h-[calc(100vh-4rem)]">
         @php
             $navItems = \App\Models\AdminMenu::where('is_active', true)->orderBy('order')->get();
+            $currentGroup = null;
         @endphp
 
         @foreach($navItems as $item)
             @if(\Route::has($item->route))
+                @if($item->group && $item->group !== $currentGroup)
+                    <div class="px-3 pt-5 pb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{{ $item->group }}</span>
+                    </div>
+                    @php $currentGroup = $item->group; @endphp
+                @elseif(!$item->group && $currentGroup !== null && $currentGroup !== '')
+                    @php $currentGroup = ''; @endphp
+                    <div class="my-2 border-t border-slate-200 dark:border-slate-700/50"></div>
+                @endif
                 <a href="{{ route($item->route) }}"
                    class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 {{ request()->routeIs($item->route . '*') ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white' }}">
                     <svg class="h-5 w-5 flex-shrink-0 {{ request()->routeIs($item->route . '*') ? 'text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">

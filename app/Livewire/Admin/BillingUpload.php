@@ -36,6 +36,17 @@ class BillingUpload extends Component
 
     public function mount(Reservation $reservation)
     {
+        if ($reservation->status === \App\Enums\ReservationStatus::EXPIRED || 
+            ($reservation->start_date && $reservation->start_date->endOfDay()->isPast())) {
+            
+            if (!in_array($reservation->status->value, ['CONFIRMED', 'COMPLETED', 'VERIFYING'])) {
+                $reservation->update(['status' => \App\Enums\ReservationStatus::EXPIRED]);
+            }
+
+            session()->flash('error', 'Reservasi ini sudah kedaluwarsa atau tanggal kegiatannya telah lewat, sehingga Anda tidak dapat mengupload tagihan baru.');
+            return redirect()->route('admin.reservations.show', $reservation);
+        }
+
         $this->reservation = $reservation;
     }
 

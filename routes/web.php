@@ -11,11 +11,8 @@ use App\Livewire\Customer\BookingWizard;
 use Illuminate\Support\Facades\Route;
 
 // ──────────────────────────────────────────────
-// Halaman Utama → diarahkan ke Booking Wizard
-// ──────────────────────────────────────────────
-Route::get('/', function () {
-    return redirect()->route('booking');
-});
+// Halaman Utama
+Route::get('/', \App\Livewire\Customer\LandingPage::class)->name('home');
 
 // Booking Wizard (Public / Guest)
 Route::get('/booking', BookingWizard::class)->name('booking');
@@ -64,6 +61,11 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     // Manajemen Reservasi
     Route::get('/reservations', [ReservationController::class, 'index'])->name('reservations.index');
     Route::get('/reservations/{reservation}', [ReservationController::class, 'show'])->name('reservations.show');
+
+    // Kalender Reservasi
+    Route::get('/calendar', function () {
+        return view('admin.calendar');
+    })->name('calendar');
     
     // Manajemen Gedung & Tipe Fasilitas
     Route::get('/buildings', \App\Livewire\Admin\BuildingManager::class)->name('buildings.index');
@@ -74,6 +76,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     
     // Manajemen Menu Navigasi
     Route::get('/menus', \App\Livewire\Admin\MenuManager::class)->name('menus.index');
+    Route::post('/menus/reorder', [\App\Http\Controllers\Admin\MenuOrderController::class, 'update'])->name('menus.reorder');
     
     // Upload Tagihan SIMPONI
     Route::get('/reservations/{reservation}/billing', \App\Livewire\Admin\BillingUpload::class)->name('billing.upload');

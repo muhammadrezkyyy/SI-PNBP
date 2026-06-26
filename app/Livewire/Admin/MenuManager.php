@@ -9,8 +9,8 @@ class MenuManager extends Component
 {
     public $menus;
 
-    // Form fields
     public $menuId;
+    public $group;
     public $label;
     public $route;
     public $icon;
@@ -20,6 +20,7 @@ class MenuManager extends Component
     public $showModal = false;
 
     protected $rules = [
+        'group' => 'nullable|string|max:255',
         'label' => 'required|string|max:255',
         'route' => 'required|string|max:255',
         'icon'  => 'required|string',
@@ -48,6 +49,7 @@ class MenuManager extends Component
         
         $menu = AdminMenu::findOrFail($id);
         $this->menuId = $menu->id;
+        $this->group = $menu->group;
         $this->label = $menu->label;
         $this->route = $menu->route;
         $this->icon = $menu->icon;
@@ -63,6 +65,7 @@ class MenuManager extends Component
         if ($this->isEditing) {
             $menu = AdminMenu::findOrFail($this->menuId);
             $menu->update([
+                'group' => $this->group ?: null,
                 'label' => $this->label,
                 'route' => $this->route,
                 'icon'  => $this->icon,
@@ -72,6 +75,7 @@ class MenuManager extends Component
         } else {
             $maxOrder = AdminMenu::max('order') ?? 0;
             AdminMenu::create([
+                'group' => $this->group ?: null,
                 'label' => $this->label,
                 'route' => $this->route,
                 'icon'  => $this->icon,
@@ -131,6 +135,7 @@ class MenuManager extends Component
     public function resetForm()
     {
         $this->menuId = null;
+        $this->group = '';
         $this->label = '';
         $this->route = '';
         $this->icon = '';

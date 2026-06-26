@@ -24,6 +24,13 @@ class PaymentController extends Controller
     {
         abort_unless($reservation->payment, 404, 'Tagihan belum dibuat oleh admin.');
 
+        // Update status to EXPIRED if date has passed and not already paid/verifying
+        if ($reservation->start_date && $reservation->start_date->endOfDay()->isPast()) {
+            if (!in_array($reservation->status->value, ['CONFIRMED', 'COMPLETED', 'VERIFYING'])) {
+                $reservation->update(['status' => \App\Enums\ReservationStatus::EXPIRED]);
+            }
+        }
+
         return view('customer.payment.show', [
             'reservation' => $reservation->load(['building', 'payment']),
         ]);
@@ -34,6 +41,12 @@ class PaymentController extends Controller
      */
     public function store(ReportPaymentRequest $request, Reservation $reservation, \App\Services\FonnteNotificationService $fonnte): RedirectResponse
     {
+        if ($reservation->status === \App\Enums\ReservationStatus::EXPIRED || 
+            ($reservation->start_date && $reservation->start_date->endOfDay()->isPast())) {
+            return redirect()->route('customer.payment.show', $reservation)
+                ->withErrors(['receipt_image' => 'Batas waktu pembayaran telah habis atau tanggal pemesanan sudah lewat.']);
+        }
+        
         // Store receipt image to default disk: 's3' di Railway, 'local' di lokal
         $disk        = config('filesystems.default', 'local');
         $receiptPath = $request->file('receipt_image')->store('receipts', $disk);
